@@ -23,7 +23,7 @@ export default async function Home() {
           </h1>
           <p className="mt-6 max-w-xl text-lg text-text-muted">
             Compila la schedina prima del Prediction Lock: vincitore, First Blood, MVP,
-            Pentakill. Ogni pronostico giusto vale punti, ogni torneo ha la sua classifica.
+            Pentakill. Sfida la community e scala la classifica.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Link

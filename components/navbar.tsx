@@ -10,6 +10,7 @@ export async function Navbar() {
         <Link href="/" className="flex items-center gap-2 font-display text-lg font-bold tracking-wide">
           <span className="inline-block h-2.5 w-2.5 bg-accent panel-cut-sm" />
           PRED<span className="text-gradient">ICTION</span>
+          <img src="/app/Pred-Ictions-logo-trasp.png"></img>
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm text-text-muted md:flex">

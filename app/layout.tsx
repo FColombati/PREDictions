@@ -15,7 +15,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "PredIction — Pronostici Tornei ARAM Predecessor",
+  title: "PredIction — Pronostici Tornei Predecessor Italia",
   description: "Compila la schedina, sfida la community, scala la classifica.",
 };
 
