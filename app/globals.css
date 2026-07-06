@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+:root {
+  --color-void: #0a0c13;
+  --color-panel: #12151f;
+  --color-panel-2: #191d2b;
+  --color-border: #262b3d;
+  --color-accent: #7c5cfc;
+  --color-accent-2: #9b82ff;
+  --color-signal: #f2a93b;
+  --color-verdant: #34d399;
+  --color-ember: #f0575f;
+  --color-text: #e9ebf3;
+  --color-text-muted: #8a90a6;
+}
+
+@theme inline {
+  --color-void: var(--color-void);
+  --color-panel: var(--color-panel);
+  --color-panel-2: var(--color-panel-2);
+  --color-border: var(--color-border);
+  --color-accent: var(--color-accent);
+  --color-accent-2: var(--color-accent-2);
+  --color-signal: var(--color-signal);
+  --color-verdant: var(--color-verdant);
+  --color-ember: var(--color-ember);
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --font-display: var(--font-chakra);
+  --font-sans: var(--font-inter);
+}
+
+body {
+  background: var(--color-void);
+  color: var(--color-text);
+  font-family: var(--font-inter), sans-serif;
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(124, 92, 252, 0.10), transparent 45%),
+    radial-gradient(circle at 100% 20%, rgba(242, 169, 59, 0.06), transparent 40%);
+  background-attachment: fixed;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-chakra), sans-serif;
+}
+
+/* Pannello con angoli tagliati - il "signature element" dell'interfaccia,
+   richiama gli HUD dei MOBA. Usato per card, box, header di sezione. */
+.panel-cut {
+  clip-path: polygon(
+    0 12px, 12px 0,
+    100% 0, 100% calc(100% - 12px),
+    calc(100% - 12px) 100%, 0 100%
+  );
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  position: relative;
+}
+
+.panel-cut-sm {
+  clip-path: polygon(
+    0 8px, 8px 0,
+    100% 0, 100% calc(100% - 8px),
+    calc(100% - 8px) 100%, 0 100%
+  );
+}
+
+.text-gradient {
+  background: linear-gradient(90deg, var(--color-accent-2), var(--color-signal));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glow-accent {
+  box-shadow: 0 0 0 1px rgba(124, 92, 252, 0.4), 0 0 24px rgba(124, 92, 252, 0.15);
+}
+
+::selection {
+  background: var(--color-accent);
+  color: white;
+}
+
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--color-accent-2);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
