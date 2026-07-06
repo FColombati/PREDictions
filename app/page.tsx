@@ -11,7 +11,7 @@ export default async function Home() {
 
   return (
     <div>
-      <section className="relative overflow-hidden border-b border-border">
+      {/* <section className="relative overflow-hidden border-b border-border">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
           <p className="mb-4 font-display text-sm uppercase tracking-[0.3em] text-signal">
             Predecessor Italia presenta: PRED-ICTIONS
@@ -41,7 +41,56 @@ export default async function Home() {
           </div>
         </div>
         <img className="logo-positioning" src="https://raw.githubusercontent.com/FColombati/PREDictions/refs/heads/main/app/Pred-Ictions-logo-trasp.png"></img>
-      </section>
+      </section> */}
+
+      <section className="relative overflow-hidden border-b border-border">
+  <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-2">
+
+    {/* Colonna sinistra */}
+    <div>
+      <p className="mb-4 font-display text-sm uppercase tracking-[0.3em] text-signal">
+        Predecessor Italia presenta: PRED-ICTIONS
+      </p>
+
+      <h1 className="max-w-2xl font-display text-4xl font-bold leading-tight sm:text-6xl">
+        Prevedi la partita.
+        <br />
+        <span className="text-gradient">Scala la classifica.</span>
+      </h1>
+
+      <p className="mt-6 max-w-xl text-lg text-text-muted">
+        Compila la schedina prima del Prediction Lock: vincitore, First Blood,
+        MVP, Pentakill. Sfida la community e scala la classifica.
+      </p>
+
+      <div className="mt-8 flex flex-wrap gap-4">
+        <Link
+          href="/tornei"
+          className="panel-cut glow-accent bg-accent px-6 py-3 font-display font-semibold text-white transition-colors hover:bg-accent-2"
+        >
+          Vedi i tornei attivi
+        </Link>
+
+        <Link
+          href="/registrati"
+          className="panel-cut border border-border px-6 py-3 font-display font-semibold text-text-muted transition-colors hover:border-accent hover:text-text"
+        >
+          Crea un account
+        </Link>
+      </div>
+    </div>
+
+    {/* Colonna destra */}
+    <div className="flex justify-center lg:justify-end">
+      <img
+        src="https://raw.githubusercontent.com/FColombati/PREDictions/refs/heads/main/app/Pred-Ictions-logo-trasp.png"
+        alt="Pred-Ictions"
+        className="w-full max-w-md"
+      />
+    </div>
+
+  </div>
+</section>
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <h2 className="mb-8 font-display text-2xl font-bold">Tornei in evidenza</h2>
