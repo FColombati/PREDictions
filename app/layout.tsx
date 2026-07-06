@@ -30,7 +30,7 @@ export default function RootLayout({
         <Navbar />
         <main className="flex-1">{children}</main>
         <footer className="border-t border-border py-6 text-center text-xs text-text-muted">
-          PredIction · Torneo amatoriale non ufficiale · non affiliato a Omeda Studios
+          PredIction · Made with ❤️ by Colo · non affiliato a Omeda Studios (non ancora bitches!)
         </footer>
       </body>
     </html>

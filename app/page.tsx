@@ -14,7 +14,7 @@ export default async function Home() {
       <section className="relative overflow-hidden border-b border-border">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
           <p className="mb-4 font-display text-sm uppercase tracking-[0.3em] text-signal">
-            ARAM · Tornei amatoriali
+            Predecessor Italia presenta: PRED-ICTIONS
           </p>
           <h1 className="max-w-2xl font-display text-4xl font-bold leading-tight sm:text-6xl">
             Prevedi la partita.
