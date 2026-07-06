@@ -7,8 +7,8 @@ export async function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-void/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-        <Link href="/" className="flex items-center gap-2 font-display text-lg font-bold tracking-wide">
-          <span className="inline-block h-2.5 w-2.5 bg-accent panel-cut-sm" />
+        <Link href="/" className="flex items-center font-display text-lg font-bold tracking-wide">
+          {/* <span className="inline-block h-2.5 w-2.5 bg-accent panel-cut-sm" /> */}
           PRED-<span className="text-gradient">ICTIONS</span>
           
         </Link>
