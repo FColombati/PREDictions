@@ -41,9 +41,10 @@ body {
 }
 
 .logo-positioning{
-  position: absolute;
-  top: 10%;
-  right: 20%;
+    position: absolute;
+    top: 0%;
+    right: 10%;
+    width: 30%;
 }
 
 h1, h2, h3, h4, .font-display {
