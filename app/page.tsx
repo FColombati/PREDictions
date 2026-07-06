@@ -40,6 +40,7 @@ export default async function Home() {
             </Link>
           </div>
         </div>
+        <img className="logo-positioning" src="https://raw.githubusercontent.com/FColombati/PREDictions/refs/heads/main/app/Pred-Ictions-logo-trasp.png"></img>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">

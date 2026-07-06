@@ -40,6 +40,12 @@ body {
   background-attachment: fixed;
 }
 
+.logo-positioning{
+  position: absolute;
+  top: 10%;
+  right: 20%;
+}
+
 h1, h2, h3, h4, .font-display {
   font-family: var(--font-chakra), sans-serif;
 }
