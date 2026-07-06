@@ -81,14 +81,13 @@ export default async function Home() {
     </div>
 
     {/* Colonna destra */}
-    <div className="flex justify-center lg:justify-end">
-      <img
-        src="https://raw.githubusercontent.com/FColombati/PREDictions/refs/heads/main/app/Pred-Ictions-logo-trasp.png"
-        alt="Pred-Ictions"
-        className="w-full max-w-md"
-      />
-    </div>
-
+ <div className="hidden lg:flex justify-center lg:justify-end">
+  <img
+    src="https://raw.githubusercontent.com/FColombati/PREDictions/refs/heads/main/app/Pred-Ictions-logo-trasp.png"
+    alt="Pred-Ictions"
+    className="w-full max-w-md"
+  />
+</div>
   </div>
 </section>
 
