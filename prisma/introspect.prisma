@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model match_results {
+  id                   String               @id
+  matchId              String
+  questionId           String               @unique
+  rispostaCorretta     String
+  matches              matches              @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  prediction_questions prediction_questions @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model matches {
+  id                           String                 @id
+  tournamentId                 String
+  teamAId                      String
+  teamBId                      String
+  data                         DateTime
+  predictionLock               DateTime
+  stato                        StatoPartita           @default(DA_GIOCARE)
+  match_results                match_results[]
+  teams_matches_teamAIdToteams teams                  @relation("matches_teamAIdToteams", fields: [teamAId], references: [id])
+  teams_matches_teamBIdToteams teams                  @relation("matches_teamBIdToteams", fields: [teamBId], references: [id])
+  tournaments                  tournaments            @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  prediction_questions         prediction_questions[]
+  user_predictions             user_predictions[]
+  user_scores                  user_scores[]
+}
+
+model players {
+  id       String  @id
+  teamId   String
+  nome     String
+  nickname String
+  avatar   String?
+  teams    teams   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+}
+
+model prediction_options {
+  id                   String               @id
+  questionId           String
+  valore               String
+  prediction_questions prediction_questions @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model prediction_questions {
+  id                      String                    @id
+  matchId                 String
+  domanda                 String
+  tipo                    TipoDomanda
+  punti                   Int                       @default(1)
+  ordine                  Int                       @default(0)
+  match_results           match_results?
+  prediction_options      prediction_options[]
+  matches                 matches                   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user_prediction_answers user_prediction_answers[]
+}
+
+model teams {
+  id                             String      @id
+  tournamentId                   String
+  nome                           String
+  logo                           String?
+  colore                         String?
+  matches_matches_teamAIdToteams matches[]   @relation("matches_teamAIdToteams")
+  matches_matches_teamBIdToteams matches[]   @relation("matches_teamBIdToteams")
+  players                        players[]
+  tournaments                    tournaments @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+}
+
+model tournaments {
+  id          String      @id
+  nome        String
+  descrizione String?
+  logo        String?
+  dataInizio  DateTime
+  dataFine    DateTime
+  stato       StatoTorneo @default(IN_PREPARAZIONE)
+  createdAt   DateTime    @default(now())
+  matches     matches[]
+  teams       teams[]
+}
+
+model user_prediction_answers {
+  id                   String               @id
+  predictionId         String
+  questionId           String
+  risposta             String
+  user_predictions     user_predictions     @relation(fields: [predictionId], references: [id], onDelete: Cascade)
+  prediction_questions prediction_questions @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([predictionId, questionId])
+}
+
+model user_predictions {
+  id                      String                    @id
+  userId                  String
+  matchId                 String
+  dataInvio               DateTime                  @default(now())
+  user_prediction_answers user_prediction_answers[]
+  matches                 matches                   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  users                   users                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchId])
+}
+
+model user_scores {
+  id        String  @id
+  userId    String
+  matchId   String
+  punti     Int
+  dettaglio Json?
+  matches   matches @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  users     users   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchId])
+}
+
+model users {
+  id                String             @id
+  username          String             @unique
+  email             String             @unique
+  password          String?
+  discordId         String?            @unique
+  avatar            String?
+  ruolo             Ruolo              @default(USER)
+  dataRegistrazione DateTime           @default(now())
+  user_predictions  user_predictions[]
+  user_scores       user_scores[]
+}
+
+enum Ruolo {
+  ADMIN
+  USER
+}
+
+enum StatoPartita {
+  DA_GIOCARE
+  PREDICTION_APERTA
+  PREDICTION_CHIUSA
+  IN_CORSO
+  TERMINATA
+  CALCOLATA
+}
+
+enum StatoTorneo {
+  IN_PREPARAZIONE
+  IN_CORSO
+  TERMINATO
+}
+
+enum TipoDomanda {
+  SQUADRA
+  GIOCATORE
+  MULTIPLA
+  BOOLEAN
+  NUMERICA
+}

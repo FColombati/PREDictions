@@ -103,7 +103,7 @@ export function MobileNav({
         }}
         className="fixed inset-y-0 left-0 z-40 border-r border-border bg-panel transition-transform duration-300 md:hidden"
       >
-        <nav className="flex flex-col gap-1 p-4 pt-20 text-sm">
+        <nav className="flex flex-col gap-1 p-4 pt-20 text-sm mobile-nav-background">
           {links.map((l) => (
             <Link
               key={l.href}
