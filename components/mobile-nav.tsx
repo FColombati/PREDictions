@@ -80,7 +80,7 @@ export function MobileNav({
             alt="PRED-ICTIONS"
             width={30}
             height={30}
-            className="h-[30px] w-[30px] object-contain"
+            className="h-[30px] w-[30px] object-contain logo-scaled"
             priority
           />
         </Link>

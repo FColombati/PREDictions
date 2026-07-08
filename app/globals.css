@@ -102,3 +102,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   background: #12151f!important;
   border: 1px solid #262b3d!important;
 }
+.logo-scaled{
+transform: scale(2);
+}
