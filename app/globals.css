@@ -98,5 +98,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 
 .mobile-nav-background{
-  --tw-backdrop-blur: blur(0px)!important;
+  --tw-backdrop-blur: blur(0px);
+  backdrop-filter: none;
 }
