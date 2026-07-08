@@ -98,7 +98,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 
 .backgrounded{
-  --tw-backdrop-blur: blur(0px);
-  backdrop-filter: none;
-  background: #12151f;
+  height: 100vh!important;
+  background: #12151f!important;
+  border: 1px solid #262b3d!important;
 }
