@@ -26,7 +26,7 @@ export default async function AdminSchedinePage() {
               <Link
                 key={t.id}
                 href={`/admin/schedine/${t.id}`}
-                className="flex flex-wrap items-center justify-between gap-3 p-4 transition-colors hover:bg-panel-2"
+                className="flex flex-col items-center text-center sm:flex-row sm:flex-wrap sm:justify-between sm:text-left gap-3 p-4 transition-colors hover:bg-panel-2"
               >
                 <div>
                   <p className="font-display font-semibold">{t.nome}</p>

@@ -1,43 +1,41 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { etichettaRisposta } from "@/lib/format";
+import { etichettaRispostaTorneo } from "@/lib/format";
 
-export default async function AdminSchedinaDettaglioPage({
+export default async function AdminSchedinaTorneoDettaglioPage({
   params,
 }: {
-  params: Promise<{ tournamentId: string; matchId: string; predictionId: string }>;
+  params: Promise<{ tournamentId: string; predictionId: string }>;
 }) {
-  const { tournamentId, matchId, predictionId } = await params;
+  const { tournamentId, predictionId } = await params;
 
-  const prediction = await prisma.userPrediction.findUnique({
+  const prediction = await prisma.tournamentPrediction.findUnique({
     where: { id: predictionId },
     include: {
       user: true,
-      match: {
+      tournament: {
         include: {
-          tournament: true,
-          teamA: { include: { players: true } },
-          teamB: { include: { players: true } },
-          results: true,
+          teams: { include: { players: true } },
+          tournamentResults: true,
         },
       },
       answers: { include: { question: true } },
     },
   });
 
-  if (!prediction || prediction.matchId !== matchId || prediction.match.tournamentId !== tournamentId) {
+  if (!prediction || prediction.tournamentId !== tournamentId) {
     notFound();
   }
 
-  const { match } = prediction;
-  const giocatori = [...match.teamA.players, ...match.teamB.players];
-  const risultatiMap = new Map(match.results.map((r) => [r.questionId, r.rispostaCorretta]));
-  const calcolata = match.stato === "CALCOLATA";
+  const { tournament } = prediction;
+  const giocatori = tournament.teams.flatMap((t) => t.players);
+  const risultatiMap = new Map(tournament.tournamentResults.map((r) => [r.questionId, r.rispostaCorretta]));
+  const calcolata = tournament.tournamentResults.length > 0;
 
   const score = calcolata
-    ? await prisma.userScore.findUnique({
-        where: { userId_matchId: { userId: prediction.userId, matchId } },
+    ? await prisma.tournamentScore.findUnique({
+        where: { userId_tournamentId: { userId: prediction.userId, tournamentId } },
       })
     : null;
 
@@ -46,10 +44,10 @@ export default async function AdminSchedinaDettaglioPage({
       <p className="mb-2 text-xs text-text-muted">
         <Link href="/admin/schedine" className="hover:text-text">Schedine inviate</Link>
         {" / "}
-        <Link href={`/admin/schedine/${tournamentId}`} className="hover:text-text">{match.tournament.nome}</Link>
+        <Link href={`/admin/schedine/${tournamentId}`} className="hover:text-text">{tournament.nome}</Link>
         {" / "}
-        <Link href={`/admin/schedine/${tournamentId}/${matchId}`} className="hover:text-text">
-          {match.teamA.nome} vs {match.teamB.nome}
+        <Link href={`/admin/schedine/${tournamentId}/torneo`} className="hover:text-text">
+          Schedina di torneo
         </Link>
       </p>
 
@@ -69,7 +67,7 @@ export default async function AdminSchedinaDettaglioPage({
 
       <div className="space-y-3">
         {prediction.answers.map((a) => {
-          const rispostaLabel = etichettaRisposta(a.question.tipo, a.risposta, match.teamA, match.teamB, giocatori);
+          const rispostaLabel = etichettaRispostaTorneo(a.question.tipo, a.risposta, tournament.teams, giocatori);
           const rispostaCorrettaRaw = risultatiMap.get(a.questionId);
           const isCorretta = calcolata && rispostaCorrettaRaw !== undefined && rispostaCorrettaRaw === a.risposta;
           const isSbagliata = calcolata && rispostaCorrettaRaw !== undefined && !isCorretta;
@@ -91,7 +89,7 @@ export default async function AdminSchedinaDettaglioPage({
               </p>
               {calcolata && rispostaCorrettaRaw !== undefined && (
                 <p className="mt-1 text-xs text-text-muted">
-                  Corretta: {etichettaRisposta(a.question.tipo, rispostaCorrettaRaw, match.teamA, match.teamB, giocatori)}
+                  Corretta: {etichettaRispostaTorneo(a.question.tipo, rispostaCorrettaRaw, tournament.teams, giocatori)}
                 </p>
               )}
             </div>

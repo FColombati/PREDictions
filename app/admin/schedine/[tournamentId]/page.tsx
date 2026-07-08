@@ -25,6 +25,7 @@ export default async function AdminSchedineTorneoPage({
         orderBy: { data: "desc" }, // le partite più recenti prima
         include: { teamA: true, teamB: true, predictions: true },
       },
+      _count: { select: { tournamentPredictions: true } },
     },
   });
 
@@ -37,6 +38,18 @@ export default async function AdminSchedineTorneoPage({
       </p>
       <h1 className="mb-8 font-display text-3xl font-bold">{torneo.nome}</h1>
 
+      {torneo._count.tournamentPredictions > 0 && (
+        <Link
+          href={`/admin/schedine/${torneo.id}/torneo`}
+          className="panel-cut mb-3 flex flex-col items-center text-center sm:flex-row sm:flex-wrap sm:justify-between sm:text-left gap-3 p-4 transition-colors hover:border-accent"
+        >
+          <p className="font-display font-semibold">Schedina di torneo</p>
+          <span className="panel-cut-sm bg-signal/15 px-3 py-1 text-sm font-bold text-signal">
+            {torneo._count.tournamentPredictions} schedine
+          </span>
+        </Link>
+      )}
+
       {torneo.matches.length === 0 ? (
         <div className="panel-cut p-8 text-text-muted">Nessuna partita in questo torneo.</div>
       ) : (
@@ -45,7 +58,7 @@ export default async function AdminSchedineTorneoPage({
             <Link
               key={m.id}
               href={`/admin/schedine/${torneo.id}/${m.id}`}
-              className="panel-cut flex flex-wrap items-center justify-between gap-3 p-4 transition-colors hover:border-accent"
+              className="panel-cut flex flex-col items-center text-center sm:flex-row sm:flex-wrap sm:justify-between sm:text-left gap-3 p-4 transition-colors hover:border-accent"
             >
               <div>
                 <p className="text-xs text-text-muted">

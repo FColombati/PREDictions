@@ -2,52 +2,47 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 
-export default async function AdminSchedinePartitaPage({
+export default async function AdminSchedineTorneoWideListPage({
   params,
 }: {
-  params: Promise<{ tournamentId: string; matchId: string }>;
+  params: Promise<{ tournamentId: string }>;
 }) {
-  const { tournamentId, matchId } = await params;
+  const { tournamentId } = await params;
 
-  const match = await prisma.match.findUnique({
-    where: { id: matchId },
+  const torneo = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
     include: {
-      tournament: true,
-      teamA: true,
-      teamB: true,
-      predictions: {
+      tournamentPredictions: {
         orderBy: { dataInvio: "asc" },
         include: { user: true },
       },
-      scores: true,
+      tournamentScores: true,
     },
   });
 
-  if (!match || match.tournamentId !== tournamentId) notFound();
+  if (!torneo) notFound();
 
-  const puntiPerUtente = new Map(match.scores.map((s) => [s.userId, s.punti]));
+  const puntiPerUtente = new Map(torneo.tournamentScores.map((s) => [s.userId, s.punti]));
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
       <p className="mb-2 text-xs text-text-muted">
         <Link href="/admin/schedine" className="hover:text-text">Schedine inviate</Link>
         {" / "}
-        <Link href={`/admin/schedine/${tournamentId}`} className="hover:text-text">{match.tournament.nome}</Link>
+        <Link href={`/admin/schedine/${tournamentId}`} className="hover:text-text">{torneo.nome}</Link>
       </p>
-      <h1 className="mb-8 font-display text-2xl font-bold sm:text-3xl">
-        {match.teamA.nome} <span className="text-text-muted">vs</span> {match.teamB.nome}
-      </h1>
+      <h1 className="mb-8 font-display text-2xl font-bold sm:text-3xl">Schedina di torneo</h1>
 
-      {match.predictions.length === 0 ? (
+      {torneo.tournamentPredictions.length === 0 ? (
         <div className="panel-cut p-8 text-text-muted">
-          Nessuna schedina inviata per questa partita.
+          Nessuna schedina di torneo inviata.
         </div>
       ) : (
         <div className="panel-cut divide-y divide-border">
-          {match.predictions.map((p) => (
+          {torneo.tournamentPredictions.map((p) => (
             <Link
               key={p.id}
-              href={`/admin/schedine/${tournamentId}/${matchId}/${p.id}`}
+              href={`/admin/schedine/${tournamentId}/torneo/${p.id}`}
               className="flex flex-col items-center text-center sm:flex-row sm:flex-wrap sm:justify-between sm:text-left gap-3 p-4 transition-colors hover:bg-panel-2"
             >
               <div>

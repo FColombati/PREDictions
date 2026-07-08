@@ -15,7 +15,7 @@ export default async function AdminTorneiPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-8 flex flex-col items-center text-center sm:flex-row sm:flex-wrap sm:justify-between sm:text-left gap-4">
         <h1 className="font-display text-3xl font-bold">Gestione tornei</h1>
         <Link
           href="/admin/tornei/nuovo"
@@ -30,7 +30,7 @@ export default async function AdminTorneiPage() {
           <Link
             key={t.id}
             href={`/admin/tornei/${t.id}`}
-            className="flex flex-wrap items-center justify-between gap-3 p-4 transition-colors hover:bg-panel-2"
+            className="flex flex-col items-center text-center sm:flex-row sm:flex-wrap sm:justify-between sm:text-left gap-3 p-4 transition-colors hover:bg-panel-2"
           >
             <div>
               <p className="font-display font-semibold">{t.nome}</p>

@@ -49,7 +49,7 @@ export default async function PartitaPage({
         </Link>
       </p>
 
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-8 flex flex-col items-center text-center sm:flex-row sm:flex-wrap sm:justify-between sm:text-left gap-4">
         <h1 className="font-display text-2xl font-bold sm:text-3xl">
           {match.teamA.nome} <span className="text-text-muted">vs</span> {match.teamB.nome}
         </h1>

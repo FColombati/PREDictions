@@ -1,41 +1,45 @@
 "use client";
 
 import { useTransition } from "react";
-import { aggiornaPredictionLock, bloccaSubitoPartita } from "@/lib/actions/admin";
+import { aggiornaPredictionLockTorneo, bloccaSubitoTorneo } from "@/lib/actions/admin";
 
 function toLocalInputValue(date: Date) {
   const tzOffset = date.getTimezoneOffset() * 60000;
   return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
 }
 
-export function PredictionLockControl({
-  matchId,
+export function PredictionLockControlTorneo({
+  tournamentId,
   predictionLock,
 }: {
-  matchId: string;
-  predictionLock: string | Date;
+  tournamentId: string;
+  predictionLock: string | Date | null;
 }) {
   const [isPending, startTransition] = useTransition();
-  const locked = new Date() >= new Date(predictionLock);
+  const locked = !!predictionLock && new Date() >= new Date(predictionLock);
 
   return (
     <div className="panel-cut space-y-4 p-5">
       <div className="flex flex-col items-center text-center sm:flex-row sm:flex-wrap sm:justify-between sm:text-left gap-3">
         <div>
-          <p className="text-sm font-semibold">Prediction Lock</p>
+          <p className="text-sm font-semibold">Prediction Lock (schedina di torneo)</p>
           <p className="text-xs text-text-muted">
-            {new Date(predictionLock).toLocaleString("it-IT", { dateStyle: "medium", timeStyle: "short" })}
-            {" · "}
-            <span className={locked ? "text-ember" : "text-verdant"}>
-              {locked ? "chiuso" : "aperto"}
-            </span>
+            {predictionLock ? (
+              <>
+                {new Date(predictionLock).toLocaleString("it-IT", { dateStyle: "medium", timeStyle: "short" })}
+                {" · "}
+                <span className={locked ? "text-ember" : "text-verdant"}>{locked ? "chiuso" : "aperto"}</span>
+              </>
+            ) : (
+              "Non ancora impostato"
+            )}
           </p>
         </div>
 
-        {!locked && (
+        {!locked && predictionLock && (
           <button
             disabled={isPending}
-            onClick={() => startTransition(() => bloccaSubitoPartita(matchId))}
+            onClick={() => startTransition(() => bloccaSubitoTorneo(tournamentId))}
             className="rounded border border-ember px-3 py-1.5 text-sm font-semibold text-ember transition-colors hover:bg-ember/10 disabled:opacity-60"
           >
             Blocca subito
@@ -44,7 +48,7 @@ export function PredictionLockControl({
       </div>
 
       <form
-        action={(formData) => startTransition(() => aggiornaPredictionLock(matchId, formData))}
+        action={(formData) => startTransition(() => aggiornaPredictionLockTorneo(tournamentId, formData))}
         className="flex flex-wrap items-end gap-3"
       >
         <div className="flex-1 min-w-[200px]">
@@ -54,7 +58,7 @@ export function PredictionLockControl({
           <input
             type="datetime-local"
             name="predictionLock"
-            defaultValue={toLocalInputValue(new Date(predictionLock))}
+            defaultValue={predictionLock ? toLocalInputValue(new Date(predictionLock)) : undefined}
             required
             className="w-full rounded border border-border bg-panel-2 px-3 py-2 text-sm outline-none focus:border-accent"
           />

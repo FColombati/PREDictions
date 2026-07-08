@@ -54,6 +54,9 @@ model User {
   predictions    UserPrediction[]
   scores         UserScore[]
 
+  tournamentPredictions TournamentPrediction[]
+  tournamentScores      TournamentScore[]
+
   @@map("users")
 }
 
@@ -67,8 +70,17 @@ model Tournament {
   stato        StatoTorneo @default(IN_PREPARAZIONE)
   createdAt    DateTime    @default(now())
 
+  // Lock per la schedina "di torneo" (es. "chi vince il torneo?").
+  // Null finché l'admin non crea/imposta almeno una domanda di torneo.
+  predictionLock DateTime?
+
   teams        Team[]
   matches      Match[]
+
+  tournamentQuestions   TournamentPredictionQuestion[]
+  tournamentPredictions TournamentPrediction[]
+  tournamentResults     TournamentResult[]
+  tournamentScores      TournamentScore[]
 
   @@map("tournaments")
 }
@@ -192,4 +204,83 @@ model UserScore {
 
   @@unique([userId, matchId])
   @@map("user_scores")
+}
+
+// ---------- SCHEDINA DI TORNEO ----------
+// Modelli paralleli a quelli di partita, per domande che riguardano
+// l'intero torneo (es. "chi vince il torneo?") invece di una singola partita.
+
+model TournamentPredictionQuestion {
+  id           String      @id @default(cuid())
+  tournamentId String
+  tournament   Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  domanda      String
+  tipo         TipoDomanda
+  punti        Int         @default(1)
+  ordine       Int         @default(0)
+
+  options      TournamentPredictionOption[]
+  answers      TournamentPredictionAnswer[]
+  results      TournamentResult[]
+
+  @@map("tournament_prediction_questions")
+}
+
+model TournamentPredictionOption {
+  id         String                       @id @default(cuid())
+  questionId String
+  question   TournamentPredictionQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  valore     String
+
+  @@map("tournament_prediction_options")
+}
+
+model TournamentPrediction {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  dataInvio    DateTime   @default(now())
+
+  answers      TournamentPredictionAnswer[]
+
+  @@unique([userId, tournamentId])
+  @@map("tournament_predictions")
+}
+
+model TournamentPredictionAnswer {
+  id           String                       @id @default(cuid())
+  predictionId String
+  prediction   TournamentPrediction         @relation(fields: [predictionId], references: [id], onDelete: Cascade)
+  questionId   String
+  question     TournamentPredictionQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  risposta     String
+
+  @@unique([predictionId, questionId])
+  @@map("tournament_prediction_answers")
+}
+
+model TournamentResult {
+  id               String                       @id @default(cuid())
+  tournamentId     String
+  tournament       Tournament                   @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  questionId       String                       @unique
+  question         TournamentPredictionQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  rispostaCorretta String
+
+  @@map("tournament_results")
+}
+
+model TournamentScore {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  punti        Int
+  dettaglio    Json?
+
+  @@unique([userId, tournamentId])
+  @@map("tournament_scores")
 }

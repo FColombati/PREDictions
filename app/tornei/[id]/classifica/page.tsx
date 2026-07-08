@@ -24,7 +24,7 @@ export default async function ClassificaPage({
           Nessun punteggio calcolato ancora. Torna dopo la prima partita giocata.
         </div>
       ) : (
-        <div className="panel-cut overflow-hidden">
+        <div className="panel-cut overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-border bg-panel-2 text-xs uppercase tracking-wide text-text-muted">
               <tr>

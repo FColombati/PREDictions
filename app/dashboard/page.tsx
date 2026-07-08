@@ -7,7 +7,7 @@ export default async function DashboardPage() {
   const session = await auth();
   const userId = session!.user.id;
 
-  const [predictions, scores, prossimePartite] = await Promise.all([
+  const [predictions, scores, tournamentPredictions, tournamentScores, prossimePartite] = await Promise.all([
     prisma.userPrediction.findMany({
       where: { userId },
       include: { match: { include: { tournament: true } } },
@@ -15,6 +15,14 @@ export default async function DashboardPage() {
     prisma.userScore.findMany({
       where: { userId },
       include: { match: { include: { tournament: true } } },
+    }),
+    prisma.tournamentPrediction.findMany({
+      where: { userId },
+      include: { tournament: true },
+    }),
+    prisma.tournamentScore.findMany({
+      where: { userId },
+      include: { tournament: true },
     }),
     prisma.match.findMany({
       where: {
@@ -28,6 +36,7 @@ export default async function DashboardPage() {
   ]);
 
   // Raggruppa per torneo: schedine inviate, partite calcolate, punti totali
+  // (include sia le schedine di partita che quella di torneo)
   const perTorneo = new Map<
     string,
     { nome: string; schedineInviate: number; partiteCalcolate: number; puntiTotali: number }
@@ -42,6 +51,21 @@ export default async function DashboardPage() {
 
   for (const s of scores) {
     const t = s.match.tournament;
+    const entry = perTorneo.get(t.id) ?? { nome: t.nome, schedineInviate: 0, partiteCalcolate: 0, puntiTotali: 0 };
+    entry.partiteCalcolate += 1;
+    entry.puntiTotali += s.punti;
+    perTorneo.set(t.id, entry);
+  }
+
+  for (const p of tournamentPredictions) {
+    const t = p.tournament;
+    const entry = perTorneo.get(t.id) ?? { nome: t.nome, schedineInviate: 0, partiteCalcolate: 0, puntiTotali: 0 };
+    entry.schedineInviate += 1;
+    perTorneo.set(t.id, entry);
+  }
+
+  for (const s of tournamentScores) {
+    const t = s.tournament;
     const entry = perTorneo.get(t.id) ?? { nome: t.nome, schedineInviate: 0, partiteCalcolate: 0, puntiTotali: 0 };
     entry.partiteCalcolate += 1;
     entry.puntiTotali += s.punti;
@@ -102,7 +126,7 @@ export default async function DashboardPage() {
             <Link
               key={m.id}
               href={`/partite/${m.id}`}
-              className="panel-cut flex flex-wrap items-center justify-between gap-3 p-4 transition-colors hover:border-accent"
+              className="panel-cut flex flex-col items-center text-center sm:flex-row sm:flex-wrap sm:justify-between sm:text-left gap-3 p-4 transition-colors hover:border-accent"
             >
               <div>
                 <p className="text-xs text-text-muted">{m.tournament.nome}</p>

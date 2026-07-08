@@ -19,3 +19,20 @@ export function etichettaRisposta(
   }
   return risposta;
 }
+
+export function etichettaRispostaTorneo(
+  tipo: string,
+  risposta: string,
+  teams: TeamRef[],
+  giocatori: PlayerRef[]
+): string {
+  if (tipo === "SQUADRA") {
+    const t = teams.find((t) => t.id === risposta);
+    return t ? t.nome : risposta;
+  }
+  if (tipo === "GIOCATORE") {
+    const p = giocatori.find((g) => g.id === risposta);
+    return p ? `${p.nome} (${p.nickname})` : risposta;
+  }
+  return risposta;
+}

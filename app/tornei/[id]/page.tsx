@@ -27,6 +27,7 @@ export default async function TorneoDetailPage({
         orderBy: { data: "asc" },
         include: { teamA: true, teamB: true },
       },
+      _count: { select: { tournamentQuestions: true } },
     },
   });
 
@@ -34,17 +35,27 @@ export default async function TorneoDetailPage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+      <div className="mb-8 flex flex-col items-center text-center sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:text-left gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold">{torneo.nome}</h1>
           <p className="mt-2 max-w-2xl text-text-muted">{torneo.descrizione}</p>
         </div>
-        <Link
-          href={`/tornei/${torneo.id}/classifica`}
-          className="panel-cut-sm border border-border px-4 py-2 text-sm font-semibold text-text-muted transition-colors hover:border-accent hover:text-text"
-        >
-          Vedi classifica →
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          {torneo._count.tournamentQuestions > 0 && (
+            <Link
+              href={`/tornei/${torneo.id}/schedina`}
+              className="panel-cut-sm bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-2"
+            >
+              Schedina di torneo →
+            </Link>
+          )}
+          <Link
+            href={`/tornei/${torneo.id}/classifica`}
+            className="panel-cut-sm border border-border px-4 py-2 text-sm font-semibold text-text-muted transition-colors hover:border-accent hover:text-text"
+          >
+            Vedi classifica →
+          </Link>
+        </div>
       </div>
 
       <h2 className="mb-4 font-display text-xl font-bold">Calendario partite</h2>
@@ -56,7 +67,7 @@ export default async function TorneoDetailPage({
             <Link
               key={m.id}
               href={`/partite/${m.id}`}
-              className="panel-cut flex flex-wrap items-center justify-between gap-3 p-4 transition-colors hover:border-accent"
+              className="panel-cut flex flex-col items-center text-center sm:flex-row sm:flex-wrap sm:justify-between sm:text-left gap-3 p-4 transition-colors hover:border-accent"
             >
               <div>
                 <p className="text-xs text-text-muted">
