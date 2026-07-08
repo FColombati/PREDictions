@@ -37,7 +37,7 @@ export function MobileNav({
   return (
     <>
       {/* Hamburger + wordmark (si sposta a destra quando il drawer è aperto) */}
-      <div className="flex items-center md:hidden">
+      <div className="flex items-center lg:hidden">
         <button
           type="button"
           aria-label={open ? "Chiudi menu" : "Apri menu"}
@@ -73,7 +73,7 @@ export function MobileNav({
         <Link
           href="/"
           aria-label="PRED-ICTIONS — home"
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 md:hidden"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 lg:hidden"
         >
           <Image
             src="/Pred-Ictions-logo-trasp.png"
@@ -91,7 +91,7 @@ export function MobileNav({
         <div
           onClick={() => setOpen(false)}
           aria-hidden="true"
-          className="fixed inset-0 z-30 bg-black/60 md:hidden"
+          className="fixed inset-0 z-30 bg-black/60 lg:hidden"
         />
       )}
 
@@ -101,7 +101,7 @@ export function MobileNav({
           width: DRAWER_WIDTH,
           transform: open ? "translateX(0)" : "translateX(-100%)",
         }}
-        className="fixed inset-y-0 left-0 z-40 border-r border-border bg-panel transition-transform duration-300 md:hidden backgrounded"
+        className="fixed inset-y-0 left-0 z-40 border-r border-border bg-panel transition-transform duration-300 lg:hidden backgrounded"
       >
         <nav className="flex flex-col gap-1 p-4 pt-20 text-sm mobile-nav-background backgrounded">
           {links.map((l) => (

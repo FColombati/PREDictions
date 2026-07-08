@@ -12,11 +12,11 @@ export async function Navbar() {
       <div className="relative mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
         <MobileNav loggedIn={loggedIn} isAdmin={isAdmin} />
 
-        <Link href="/" className="hidden items-center font-display text-lg font-bold tracking-wide md:flex">
+        <Link href="/" className="hidden items-center font-display text-lg font-bold tracking-wide lg:flex">
           PRED-<span className="text-gradient">ICTIONS</span>
         </Link>
 
-        <nav className="hidden items-center gap-6 text-sm text-text-muted md:flex">
+        <nav className="hidden items-center gap-6 text-sm text-text-muted lg:flex">
           <Link href="/tornei" className="hover:text-text transition-colors">Tornei</Link>
           <Link href="/classifica" className="hover:text-text transition-colors">Classifica</Link>
           {session?.user && (
@@ -34,7 +34,7 @@ export async function Navbar() {
           )}
         </nav>
 
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-3 lg:flex">
           {session?.user ? (
             <form
               action={async () => {
