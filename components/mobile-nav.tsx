@@ -101,7 +101,7 @@ export function MobileNav({
           width: DRAWER_WIDTH,
           transform: open ? "translateX(0)" : "translateX(-100%)",
         }}
-        className="fixed inset-y-0 left-0 z-40 border-r border-border bg-panel transition-transform duration-300 md:hidden"
+        className="fixed inset-y-0 left-0 z-40 border-r border-border bg-panel transition-transform duration-300 md:hidden backgrounded"
       >
         <nav className="flex flex-col gap-1 p-4 pt-20 text-sm mobile-nav-background">
           {links.map((l) => (

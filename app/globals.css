@@ -97,7 +97,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
-.mobile-nav-background{
+.backgrounded{
   --tw-backdrop-blur: blur(0px);
   backdrop-filter: none;
+  background: #12151f;
 }
