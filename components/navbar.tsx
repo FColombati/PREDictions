@@ -48,15 +48,15 @@ export async function Navbar() {
             </form>
           ) : (
             <>
-              <Link href="/login" className="text-sm text-text-muted hover:text-text transition-colors">
+              <Link href="/login" className="panel-cut-sm bg-accent px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-accent-2">
                 Accedi
               </Link>
-              <Link
+              {/* <Link
                 href="/registrati"
                 className="panel-cut-sm bg-accent px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-accent-2"
               >
                 Registrati
-              </Link>
+              </Link> */}
             </>
           )}
         </div>

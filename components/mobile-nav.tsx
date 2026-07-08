@@ -137,17 +137,17 @@ export function MobileNav({
               <Link
                 href="/login"
                 onClick={() => setOpen(false)}
-                className="rounded px-3 py-2.5 text-text-muted transition-colors hover:bg-panel-2 hover:text-text"
+                className="rounded px-3 py-2.5 font-semibold text-accent-2 transition-colors hover:bg-panel-2"
               >
                 Accedi
               </Link>
-              <Link
+              {/* <Link
                 href="/registrati"
                 onClick={() => setOpen(false)}
                 className="rounded px-3 py-2.5 font-semibold text-accent-2 transition-colors hover:bg-panel-2"
               >
                 Registrati
-              </Link>
+              </Link> */}
             </>
           )}
         </nav>
