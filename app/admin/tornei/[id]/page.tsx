@@ -15,6 +15,8 @@ import {
 import { StatoTorneoSelect } from "@/components/admin/stato-torneo-select";
 import { PredictionLockControlTorneo } from "@/components/admin/prediction-lock-control-torneo";
 import { CalcolaPunteggiTorneoButton } from "./calcola-torneo-button";
+import { ConfirmSubmitButton } from "@/components/achievements/confirm-delete-button";
+import { squadraA, squadraB } from "@/lib/match-snapshot";
 
 export default async function AdminTorneoPage({
   params,
@@ -40,7 +42,7 @@ export default async function AdminTorneoPage({
   const giocatoriTorneo = torneo.teams.flatMap((t) => t.players);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[96rem] px-4 py-10 sm:px-6">
       <div className="mb-8 flex flex-col items-center text-center sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:text-left gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold">{torneo.nome}</h1>
@@ -65,7 +67,12 @@ export default async function AdminTorneoPage({
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="font-display font-bold">{team.nome}</h3>
                 <form action={async () => { "use server"; await eliminaSquadra(team.id, torneo.id); }}>
-                  <button className="text-xs text-ember hover:underline">Elimina</button>
+                  <ConfirmSubmitButton
+                    confirmMessage="Eliminare questa squadra e i suoi giocatori? Le partite già giocate e le schedine restano intatte (nomi e giocatori restano visibili nello storico)."
+                    className="text-xs text-ember hover:underline"
+                  >
+                    Elimina
+                  </ConfirmSubmitButton>
                 </form>
               </div>
 
@@ -125,7 +132,7 @@ export default async function AdminTorneoPage({
                   {new Date(m.data).toLocaleString("it-IT", { dateStyle: "medium", timeStyle: "short" })}
                 </p>
                 <p className="font-display font-semibold">
-                  {m.teamA.nome} <span className="text-text-muted">vs</span> {m.teamB.nome}
+                  {squadraA(m).nome} <span className="text-text-muted">vs</span> {squadraB(m).nome}
                 </p>
               </div>
               <span className="rounded-full bg-panel-2 px-2.5 py-0.5 text-xs text-text-muted">{m.stato}</span>

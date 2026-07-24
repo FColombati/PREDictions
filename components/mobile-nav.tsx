@@ -19,6 +19,10 @@ export function MobileNav({
   const links = [
     { href: "/tornei", label: "Tornei" },
     { href: "/classifica", label: "Classifica" },
+    { href: "/classifica-achievement", label: "Classifica achievement" },
+    { href: "/achievements/lista", label: "Lista achievement" },
+    { href: "/achievements", label: "Feed achievement" },
+    { href: "/cerca", label: "Cerca" },
     ...(loggedIn
       ? [
           { href: "/dashboard", label: "Dashboard" },
@@ -30,6 +34,8 @@ export function MobileNav({
       ? [
           { href: "/admin", label: "Admin" },
           { href: "/admin/schedine", label: "Schedine" },
+          { href: "/admin/achievements", label: "Achievement (admin)" },
+          { href: "/admin/rewards", label: "Rewards (admin)" },
         ]
       : []),
   ];

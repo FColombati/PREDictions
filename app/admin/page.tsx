@@ -21,7 +21,7 @@ export default async function AdminDashboard() {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[96rem] px-4 py-10 sm:px-6">
       <div className="mb-8 flex flex-col items-center text-center sm:flex-row sm:flex-wrap sm:justify-between sm:text-left gap-4">
         <h1 className="font-display text-3xl font-bold">Dashboard amministratore</h1>
         <Link

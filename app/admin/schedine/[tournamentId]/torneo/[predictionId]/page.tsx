@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { etichettaRispostaTorneo } from "@/lib/format";
+import { modificaRisposteSchedinaTorneo } from "@/lib/actions/admin";
+import { ModificaRisposteForm } from "@/components/admin/modifica-risposte-form";
 
 export default async function AdminSchedinaTorneoDettaglioPage({
   params,
@@ -18,6 +20,7 @@ export default async function AdminSchedinaTorneoDettaglioPage({
         include: {
           teams: { include: { players: true } },
           tournamentResults: true,
+          tournamentQuestions: { orderBy: { ordine: "asc" }, include: { options: true } },
         },
       },
       answers: { include: { question: true } },
@@ -39,8 +42,22 @@ export default async function AdminSchedinaTorneoDettaglioPage({
       })
     : null;
 
+  const risposteAttuali = Object.fromEntries(prediction.answers.map((a) => [a.questionId, a.risposta]));
+
+  const domandeForm = tournament.tournamentQuestions.map((q) => {
+    let opzioni: { valore: string; etichetta: string }[] = [];
+    if (q.tipo === "SQUADRA") {
+      opzioni = tournament.teams.map((t) => ({ valore: t.id, etichetta: t.nome }));
+    } else if (q.tipo === "GIOCATORE") {
+      opzioni = giocatori.map((p) => ({ valore: p.id, etichetta: `${p.nome} (${p.nickname})` }));
+    } else if (q.tipo === "MULTIPLA" || q.tipo === "BOOLEAN") {
+      opzioni = q.options.map((o) => ({ valore: o.valore, etichetta: o.valore }));
+    }
+    return { id: q.id, domanda: q.domanda, tipo: q.tipo, punti: q.punti, opzioni };
+  });
+
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <p className="mb-2 text-xs text-text-muted">
         <Link href="/admin/schedine" className="hover:text-text">Schedine inviate</Link>
         {" / "}
@@ -95,6 +112,14 @@ export default async function AdminSchedinaTorneoDettaglioPage({
             </div>
           );
         })}
+      </div>
+
+      <div className="mt-6">
+        <ModificaRisposteForm
+          azione={modificaRisposteSchedinaTorneo.bind(null, prediction.id)}
+          domande={domandeForm}
+          risposteAttuali={risposteAttuali}
+        />
       </div>
     </div>
   );

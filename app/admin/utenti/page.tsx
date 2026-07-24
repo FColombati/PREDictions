@@ -7,7 +7,7 @@ export default async function AdminUtentiPage() {
   });
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <h1 className="mb-8 font-display text-3xl font-bold">Utenti registrati</h1>
 
       <div className="panel-cut overflow-x-auto">

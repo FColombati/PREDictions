@@ -29,6 +29,7 @@ enum StatoPartita {
   IN_CORSO
   TERMINATA
   CALCOLATA
+  ANNULLATA
 }
 
 enum TipoDomanda {
@@ -48,6 +49,10 @@ model User {
   password       String?
   discordId      String?  @unique
   avatar         String?
+  bio            String?
+  // Aggiustamento manuale del punteggio achievement (può essere negativo),
+  // impostato dall'admin indipendentemente dagli achievement sbloccati.
+  bonusPuntiAchievement Int @default(0)
   ruolo          Ruolo    @default(USER)
   dataRegistrazione DateTime @default(now())
 
@@ -56,6 +61,23 @@ model User {
 
   tournamentPredictions TournamentPrediction[]
   tournamentScores      TournamentScore[]
+
+  achievements   UserAchievement[]
+  rewards        UserReward[]
+  badgeSlots     UserEquippedBadge[]
+
+  // Slot di equipaggiamento: uno solo per tipo (tranne i badge, gestiti
+  // a parte in UserEquippedBadge perché se ne possono equipaggiare fino a 3)
+  equippedTitleId      String?
+  equippedTitle        CosmeticReward? @relation("EquippedTitle", fields: [equippedTitleId], references: [id], onDelete: SetNull)
+  equippedFrameId      String?
+  equippedFrame        CosmeticReward? @relation("EquippedFrame", fields: [equippedFrameId], references: [id], onDelete: SetNull)
+  equippedBackgroundId String?
+  equippedBackground   CosmeticReward? @relation("EquippedBackground", fields: [equippedBackgroundId], references: [id], onDelete: SetNull)
+  equippedThemeId      String?
+  equippedTheme        CosmeticReward? @relation("EquippedTheme", fields: [equippedThemeId], references: [id], onDelete: SetNull)
+  equippedDecorationId String?
+  equippedDecoration   CosmeticReward? @relation("EquippedDecoration", fields: [equippedDecorationId], references: [id], onDelete: SetNull)
 
   @@map("users")
 }
@@ -81,6 +103,8 @@ model Tournament {
   tournamentPredictions TournamentPrediction[]
   tournamentResults     TournamentResult[]
   tournamentScores      TournamentScore[]
+
+  achievements          Achievement[]
 
   @@map("tournaments")
 }
@@ -115,13 +139,20 @@ model Match {
   id              String       @id @default(cuid())
   tournamentId    String
   tournament      Tournament   @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  teamAId         String
-  teamA           Team         @relation("TeamA", fields: [teamAId], references: [id])
-  teamBId         String
-  teamB           Team         @relation("TeamB", fields: [teamBId], references: [id])
+  teamAId         String?
+  teamA           Team?        @relation("TeamA", fields: [teamAId], references: [id], onDelete: SetNull)
+  teamBId         String?
+  teamB           Team?        @relation("TeamB", fields: [teamBId], references: [id], onDelete: SetNull)
   data            DateTime
   predictionLock  DateTime
   stato           StatoPartita @default(DA_GIOCARE)
+
+  // Fotografia permanente di nomi/colori delle due squadre e di tutti i
+  // giocatori coinvolti, presa alla creazione della partita. Permette di
+  // eliminare le squadre (es. quelle temporanee di uno showmatch) dopo che
+  // la partita è stata giocata e calcolata, senza perdere la possibilità
+  // di leggere schedine/risultati passati.
+  rosaSnapshot    Json?
 
   questions       PredictionQuestion[]
   predictions     UserPrediction[]
@@ -139,6 +170,11 @@ model PredictionQuestion {
   tipo      TipoDomanda
   punti     Int         @default(1)
   ordine    Int         @default(0)
+
+  // Se true, questa domanda continua ad essere calcolata normalmente anche
+  // se la partita viene ANNULLATA (es. "Partita annullata o a tavolino?"),
+  // mentre tutte le altre domande di quella schedina restano a 0 punti.
+  contaSeAnnullata Boolean @default(false)
 
   options   PredictionOption[]
   answers   UserPredictionAnswer[]
@@ -283,4 +319,171 @@ model TournamentScore {
 
   @@unique([userId, tournamentId])
   @@map("tournament_scores")
+}
+
+// ---------- ACHIEVEMENT ENGINE ----------
+
+enum AchievementCategoria {
+  PARTECIPAZIONE
+  ACCURATEZZA
+  STREAK
+  TORNEO
+  COMMUNITY
+  STAGIONALE
+  SEGRETO
+}
+
+enum AchievementRarita {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+  MYTHIC
+}
+
+enum AchievementTrigger {
+  PREDICTION_SUBMITTED
+  PREDICTION_WON
+  PREDICTION_LOST
+  ACCURACY_UPDATED
+  TOURNAMENT_JOINED
+  TOURNAMENT_WON
+  TOURNAMENT_FINISHED
+  STREAK_UPDATED
+  ACCOUNT_CREATED
+  MANUAL
+}
+
+enum ConditionType {
+  COUNT_GTE
+  STREAK_GTE
+  ACCURACY_GTE
+  TOURNAMENT_RANK
+  PERFECT_TOURNAMENT
+  MANUAL
+}
+
+enum CosmeticTipo {
+  BADGE
+  TITLE
+  AVATAR_FRAME
+  BACKGROUND
+  THEME
+  USERNAME_DECORATION
+}
+
+model Achievement {
+  id             String               @id @default(cuid())
+  nome           String
+  descrizione    String
+  icona          String
+  categoria      AchievementCategoria
+  rarita         AchievementRarita
+  punti          Int                  @default(10)
+  trigger        AchievementTrigger
+  tipoCondizione ConditionType
+  valoreTarget   Int                  @default(1)
+  nascosto       Boolean              @default(false)
+  tempoLimitato  Boolean              @default(false)
+  eventId        String?
+  dataInizio     DateTime?
+  dataFine       DateTime?
+  attivo         Boolean              @default(true)
+  eliminato      Boolean              @default(false)
+
+  // Se valorizzato, l'achievement è esclusivo di questo torneo
+  // (es. "Vincitore del torneo X"), usato con trigger TOURNAMENT_FINISHED/WON
+  tournamentId   String?
+  tournament     Tournament?          @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  ricompense     AchievementReward[]
+  sbloccati      UserAchievement[]
+
+  @@map("achievements")
+}
+
+model CosmeticReward {
+  id           String            @id @default(cuid())
+  tipo         CosmeticTipo
+  nome         String
+  descrizione  String?
+  // Proprietà CSS applicate all'elemento (senza selettore), es.
+  // "border: 4px solid transparent; animation: mio-spin 3s linear infinite;"
+  asset        String
+  // CSS avanzato facoltativo, iniettato così com'è in un tag <style>
+  // (tipicamente uno o più blocchi @keyframes richiamati da `asset`).
+  cssAvanzato  String?
+  previewAsset String?
+  rarita       AchievementRarita
+  createdAt    DateTime          @default(now())
+
+  achievements AchievementReward[]
+  utenti       UserReward[]
+
+  utentiTitolo      User[] @relation("EquippedTitle")
+  utentiCornice     User[] @relation("EquippedFrame")
+  utentiSfondo      User[] @relation("EquippedBackground")
+  utentiTema        User[] @relation("EquippedTheme")
+  utentiDecorazione User[] @relation("EquippedDecoration")
+  utentiBadgeSlot   UserEquippedBadge[]
+
+  @@map("cosmetic_rewards")
+}
+
+model AchievementReward {
+  id            String         @id @default(cuid())
+  achievementId String
+  achievement   Achievement    @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  rewardId      String
+  reward        CosmeticReward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+
+  @@unique([achievementId, rewardId])
+  @@map("achievement_rewards")
+}
+
+model UserAchievement {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement  @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  progresso     Int          @default(0)
+  sbloccato     Boolean      @default(false)
+  sbloccatoIl   DateTime?
+  // Se la notifica dello sblocco è già stata vista aprendo la campanella
+  // nel menu — indipendente da come/dove è avvenuto lo sblocco stesso.
+  notificaVista Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+
+  @@unique([userId, achievementId])
+  @@index([sbloccatoIl])
+  @@map("user_achievements")
+}
+
+model UserReward {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rewardId  String
+  reward    CosmeticReward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now())
+
+  @@unique([userId, rewardId])
+  @@map("user_rewards")
+}
+
+model UserEquippedBadge {
+  id       String         @id @default(cuid())
+  userId   String
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rewardId String
+  reward   CosmeticReward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  slot     Int
+
+  @@unique([userId, slot])
+  @@unique([userId, rewardId])
+  @@map("user_equipped_badges")
 }

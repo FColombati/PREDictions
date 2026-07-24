@@ -12,16 +12,16 @@ export default async function Home() {
   return (
     <div>
       {/* <section className="relative overflow-hidden border-b border-border">
-        <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
+        <div className="mx-auto max-w-[96rem] px-4 py-20 sm:px-6 sm:py-28">
           <p className="mb-4 font-display text-sm uppercase tracking-[0.3em] text-signal">
             Predecessor Italia presenta: PRED-ICTIONS
           </p>
-          <h1 className="max-w-2xl font-display text-4xl font-bold leading-tight sm:text-6xl">
+          <h1 className="max-w-4xl font-display text-4xl font-bold leading-tight sm:text-6xl">
             Prevedi la partita.
             <br />
             <span className="text-gradient">Scala la classifica.</span>
           </h1>
-          <p className="mt-6 max-w-xl text-lg text-text-muted">
+          <p className="mt-6 max-w-3xl text-lg text-text-muted">
             Compila la schedina prima del Prediction Lock: vincitore, First Blood, MVP,
             Pentakill. Sfida la community e scala la classifica.
           </p>
@@ -44,7 +44,7 @@ export default async function Home() {
       </section> */}
 
       <section className="relative overflow-hidden border-b border-border">
-  <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-2">
+  <div className="mx-auto grid max-w-[96rem] grid-cols-1 items-center gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-2">
 
     {/* Colonna sinistra */}
     <div>
@@ -52,13 +52,13 @@ export default async function Home() {
         Predecessor Italia presenta: PRED-ICTIONS
       </p>
 
-      <h1 className="max-w-2xl font-display text-4xl font-bold leading-tight sm:text-6xl">
+      <h1 className="max-w-4xl font-display text-4xl font-bold leading-tight sm:text-6xl">
         Prevedi la partita.
         <br />
         <span className="text-gradient">Scala la classifica.</span>
       </h1>
 
-      <p className="mt-6 max-w-xl text-lg text-text-muted">
+      <p className="mt-6 max-w-3xl text-lg text-text-muted">
         Compila la schedina prima del Prediction Lock: vincitore, First Blood,
         MVP, Pentakill. Sfida la community e scala la classifica.
       </p>
@@ -91,7 +91,7 @@ export default async function Home() {
   </div>
 </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <section className="mx-auto max-w-[96rem] px-4 py-16 sm:px-6">
         <h2 className="mb-8 font-display text-2xl font-bold">Tornei in evidenza</h2>
 
         {tornei.length === 0 ? (

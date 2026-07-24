@@ -3,6 +3,7 @@
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { valutaTrigger } from "@/lib/achievements";
 
 const registerSchema = z.object({
   username: z.string().min(3, "Lo username deve avere almeno 3 caratteri"),
@@ -40,9 +41,11 @@ export async function registraUtente(
 
   const hash = await bcrypt.hash(password, 10);
 
-  await prisma.user.create({
+  const user = await prisma.user.create({
     data: { username, email, password: hash },
   });
+
+  await valutaTrigger(user.id, "ACCOUNT_CREATED");
 
   return { success: true };
 }

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { valoriContabili } from "@/lib/stats";
 
 /**
  * Calcola i punteggi di tutti gli utenti per una partita, confrontando
@@ -69,6 +70,79 @@ export async function calcolaPunteggiPartita(matchId: string) {
     where: { id: matchId },
     data: { stato: "CALCOLATA" },
   });
+
+  return { utentiCalcolati: match.predictions.length };
+}
+
+/**
+ * Calcola i punteggi per una partita ANNULLATA: tutte le domande vengono
+ * azzerate (0 punti, escluse da streak/accuratezza), TRANNE quelle
+ * eventualmente segnate come "conta se annullata" (es. "Partita annullata
+ * o a tavolino?"), che vengono valutate normalmente — la risposta corretta
+ * è sempre "Sì", dato che la partita è stata effettivamente annullata.
+ * Non richiede che siano già stati inseriti risultati per le altre domande.
+ */
+export async function calcolaPunteggiPartitaAnnullata(matchId: string) {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: {
+      predictions: { include: { answers: true } },
+      questions: true,
+    },
+  });
+
+  if (!match) throw new Error("Partita non trovata");
+
+  const domandeSpeciali = match.questions.filter((q) => q.contaSeAnnullata);
+
+  // La risposta corretta per le domande speciali è sempre "Sì": la
+  // partita è stata effettivamente annullata/a tavolino.
+  for (const q of domandeSpeciali) {
+    await prisma.matchResult.upsert({
+      where: { questionId: q.id },
+      update: { rispostaCorretta: "Sì" },
+      create: { matchId, questionId: q.id, rispostaCorretta: "Sì" },
+    });
+  }
+
+  const idDomandeSpeciali = new Set(domandeSpeciali.map((q) => q.id));
+  const puntiPerDomanda = new Map(match.questions.map((q) => [q.id, q.punti]));
+
+  for (const prediction of match.predictions) {
+    let totale = 0;
+    const dettaglio: Record<
+      string,
+      { corretta: boolean; puntiOttenuti: number; risposta: string; rispostaCorretta: string | null; escluso?: boolean }
+    > = {};
+
+    for (const answer of prediction.answers) {
+      if (idDomandeSpeciali.has(answer.questionId)) {
+        const punti = puntiPerDomanda.get(answer.questionId) ?? 0;
+        const corretta = answer.risposta.trim().toLowerCase() === "sì" || answer.risposta.trim().toLowerCase() === "si";
+        if (corretta) totale += punti;
+        dettaglio[answer.questionId] = {
+          corretta,
+          puntiOttenuti: corretta ? punti : 0,
+          risposta: answer.risposta,
+          rispostaCorretta: "Sì",
+        };
+      } else {
+        dettaglio[answer.questionId] = {
+          corretta: false,
+          puntiOttenuti: 0,
+          risposta: answer.risposta,
+          rispostaCorretta: null,
+          escluso: true,
+        };
+      }
+    }
+
+    await prisma.userScore.upsert({
+      where: { userId_matchId: { userId: prediction.userId, matchId } },
+      update: { punti: totale, dettaglio },
+      create: { userId: prediction.userId, matchId, punti: totale, dettaglio },
+    });
+  }
 
   return { utentiCalcolati: match.predictions.length };
 }
@@ -178,9 +252,10 @@ export async function classificaTorneo(tournamentId: string) {
     { username: string; avatar: string | null; punti: number; corrette: number; totali: number }
   >();
 
-  const accumula = (userId: string, username: string, avatar: string | null, punti: number, dettaglio: Record<string, { corretta: boolean }>) => {
-    const corrette = Object.values(dettaglio).filter((d) => d.corretta).length;
-    const totali = Object.values(dettaglio).length;
+  const accumula = (userId: string, username: string, avatar: string | null, punti: number, dettaglio: unknown) => {
+    const valori = valoriContabili(dettaglio);
+    const corrette = valori.filter((d) => d.corretta).length;
+    const totali = valori.length;
 
     const prev = perUtente.get(userId) ?? { username, avatar, punti: 0, corrette: 0, totali: 0 };
 
@@ -194,10 +269,10 @@ export async function classificaTorneo(tournamentId: string) {
   };
 
   for (const s of scores) {
-    accumula(s.userId, s.user.username, s.user.avatar, s.punti, (s.dettaglio as Record<string, { corretta: boolean }>) ?? {});
+    accumula(s.userId, s.user.username, s.user.avatar, s.punti, s.dettaglio);
   }
   for (const s of tournamentScores) {
-    accumula(s.userId, s.user.username, s.user.avatar, s.punti, (s.dettaglio as Record<string, { corretta: boolean }>) ?? {});
+    accumula(s.userId, s.user.username, s.user.avatar, s.punti, s.dettaglio);
   }
 
   const classifica = Array.from(perUtente.entries())

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { squadraA, squadraB } from "@/lib/match-snapshot";
 
 const statoLabel: Record<string, string> = {
   DA_GIOCARE: "Da giocare",
@@ -9,6 +10,7 @@ const statoLabel: Record<string, string> = {
   IN_CORSO: "In corso",
   TERMINATA: "Terminata",
   CALCOLATA: "Calcolata",
+  ANNULLATA: "Annullata",
 };
 
 export default async function AdminSchedineTorneoPage({
@@ -32,7 +34,7 @@ export default async function AdminSchedineTorneoPage({
   if (!torneo) notFound();
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <p className="mb-2 text-xs text-text-muted">
         <Link href="/admin/schedine" className="hover:text-text">Schedine inviate</Link>
       </p>
@@ -67,7 +69,7 @@ export default async function AdminSchedineTorneoPage({
                   {statoLabel[m.stato]}
                 </p>
                 <p className="font-display font-semibold">
-                  {m.teamA.nome} <span className="text-text-muted">vs</span> {m.teamB.nome}
+                  {squadraA(m).nome} <span className="text-text-muted">vs</span> {squadraB(m).nome}
                 </p>
               </div>
               <span className="panel-cut-sm bg-signal/15 px-3 py-1 text-sm font-bold text-signal">

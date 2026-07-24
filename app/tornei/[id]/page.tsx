@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { CountdownLock } from "@/components/countdown-lock";
+import { squadraA, squadraB } from "@/lib/match-snapshot";
 
 const statoPartitaLabel: Record<string, string> = {
   DA_GIOCARE: "Da giocare",
@@ -10,6 +11,7 @@ const statoPartitaLabel: Record<string, string> = {
   IN_CORSO: "In corso",
   TERMINATA: "Terminata",
   CALCOLATA: "Calcolata",
+  ANNULLATA: "Annullata",
 };
 
 export default async function TorneoDetailPage({
@@ -34,11 +36,11 @@ export default async function TorneoDetailPage({
   if (!torneo) notFound();
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[96rem] px-4 py-10 sm:px-6">
       <div className="mb-8 flex flex-col items-center text-center sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:text-left gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold">{torneo.nome}</h1>
-          <p className="mt-2 max-w-2xl text-text-muted">{torneo.descrizione}</p>
+          <p className="mt-2 max-w-4xl text-text-muted">{torneo.descrizione}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {torneo._count.tournamentQuestions > 0 && (
@@ -76,7 +78,7 @@ export default async function TorneoDetailPage({
                   {statoPartitaLabel[m.stato]}
                 </p>
                 <p className="font-display font-semibold">
-                  {m.teamA.nome} <span className="text-text-muted">vs</span> {m.teamB.nome}
+                  {squadraA(m).nome} <span className="text-text-muted">vs</span> {squadraB(m).nome}
                 </p>
               </div>
               {m.stato === "PREDICTION_APERTA" && <CountdownLock lockAt={m.predictionLock} />}

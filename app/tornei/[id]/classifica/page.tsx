@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { classificaTorneo } from "@/lib/scoring";
@@ -15,7 +16,7 @@ export default async function ClassificaPage({
   const classifica = await classificaTorneo(id);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <h1 className="mb-1 font-display text-3xl font-bold">Classifica</h1>
       <p className="mb-8 text-text-muted">{torneo.nome}</p>
 
@@ -41,7 +42,11 @@ export default async function ClassificaPage({
                   <td className="px-4 py-3 font-display font-bold text-text-muted">
                     {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}
                   </td>
-                  <td className="px-4 py-3 font-semibold">{row.username}</td>
+                  <td className="px-4 py-3 font-semibold">
+                    <Link href={`/profile/${row.username}`} className="hover:text-accent-2">
+                      {row.username}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 text-right font-display font-bold text-signal">
                     {row.punti}
                   </td>

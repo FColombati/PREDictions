@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { squadraA, squadraB } from "@/lib/match-snapshot";
 
 export default async function AdminSchedinePartitaPage({
   params,
@@ -28,14 +29,14 @@ export default async function AdminSchedinePartitaPage({
   const puntiPerUtente = new Map(match.scores.map((s) => [s.userId, s.punti]));
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <p className="mb-2 text-xs text-text-muted">
         <Link href="/admin/schedine" className="hover:text-text">Schedine inviate</Link>
         {" / "}
         <Link href={`/admin/schedine/${tournamentId}`} className="hover:text-text">{match.tournament.nome}</Link>
       </p>
       <h1 className="mb-8 font-display text-2xl font-bold sm:text-3xl">
-        {match.teamA.nome} <span className="text-text-muted">vs</span> {match.teamB.nome}
+        {squadraA(match).nome} <span className="text-text-muted">vs</span> {squadraB(match).nome}
       </h1>
 
       {match.predictions.length === 0 ? (

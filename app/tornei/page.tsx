@@ -20,7 +20,7 @@ export default async function TorneiPage() {
   });
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[96rem] px-4 py-10 sm:px-6">
       <h1 className="mb-8 font-display text-3xl font-bold">Tornei</h1>
 
       {tornei.length === 0 ? (

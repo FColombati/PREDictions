@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import Discord from "next-auth/providers/discord";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { valutaTrigger } from "@/lib/achievements";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: "jwt" },
@@ -70,6 +71,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           ruolo: "USER",
         },
       });
+
+      const nuovoUtente = await prisma.user.findUnique({ where: { email: user.email } });
+      if (nuovoUtente) await valutaTrigger(nuovoUtente.id, "ACCOUNT_CREATED");
 
       return true;
     },

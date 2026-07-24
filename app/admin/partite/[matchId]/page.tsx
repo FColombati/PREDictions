@@ -4,10 +4,13 @@ import {
   creaDomanda,
   eliminaDomanda,
   inserisciRisultati,
+  eliminaPartita,
 } from "@/lib/actions/admin";
 import { CalcolaPunteggiButton } from "./calcola-button";
 import { StatoPartitaSelect } from "@/components/admin/stato-partita-select";
 import { PredictionLockControl } from "@/components/admin/prediction-lock-control";
+import { squadraA, squadraB, giocatoriPartita } from "@/lib/match-snapshot";
+import { ConfirmSubmitButton } from "@/components/achievements/confirm-delete-button";
 
 export default async function AdminPartitaPage({
   params,
@@ -31,16 +34,30 @@ export default async function AdminPartitaPage({
   if (!match) notFound();
 
   const risultatiMap = new Map(match.results.map((r) => [r.questionId, r.rispostaCorretta]));
-  const giocatori = [...match.teamA.players, ...match.teamB.players];
+  const teamA = squadraA(match);
+  const teamB = squadraB(match);
+  const giocatori = giocatoriPartita(match);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <p className="mb-2 text-xs text-text-muted">{match.tournament.nome}</p>
       <div className="mb-8 flex flex-col items-center text-center sm:flex-row sm:flex-wrap sm:justify-between sm:text-left gap-4">
         <h1 className="font-display text-2xl font-bold sm:text-3xl">
-          {match.teamA.nome} <span className="text-text-muted">vs</span> {match.teamB.nome}
+          {teamA.nome} <span className="text-text-muted">vs</span> {teamB.nome}
         </h1>
-        <StatoPartitaSelect matchId={match.id} statoAttuale={match.stato} />
+        <div className="flex items-center gap-2">
+          <StatoPartitaSelect matchId={match.id} statoAttuale={match.stato} />
+          {match.stato === "ANNULLATA" && (
+            <form action={async () => { "use server"; await eliminaPartita(match.id); }}>
+              <ConfirmSubmitButton
+                confirmMessage="Eliminare definitivamente questa partita annullata? Domande, schedine inviate, risposte e punteggi collegati verranno cancellati per sempre. Operazione irreversibile."
+                className="rounded border border-ember px-3 py-2 text-sm font-semibold text-ember transition-colors hover:bg-ember/10"
+              >
+                Elimina definitivamente
+              </ConfirmSubmitButton>
+            </form>
+          )}
+        </div>
       </div>
 
       <p className="mb-4 text-sm text-text-muted">{match.predictions.length} schedine ricevute</p>
@@ -56,7 +73,14 @@ export default async function AdminPartitaPage({
           {match.questions.map((q) => (
             <div key={q.id} className="panel-cut flex items-center justify-between gap-3 p-4">
               <div>
-                <p className="font-semibold">{q.domanda}</p>
+                <p className="font-semibold">
+                  {q.domanda}
+                  {q.contaSeAnnullata && (
+                    <span className="ml-2 rounded-full bg-ember/15 px-2 py-0.5 text-[11px] font-semibold text-ember">
+                      conta se annullata
+                    </span>
+                  )}
+                </p>
                 <p className="text-xs text-text-muted">
                   {q.tipo} · {q.punti} punti
                   {q.options.length > 0 && ` · Opzioni: ${q.options.map((o) => o.valore).join(", ")}`}
@@ -87,6 +111,10 @@ export default async function AdminPartitaPage({
               <input name="punti" type="number" defaultValue={1} min={1} required className="rounded border border-border bg-panel-2 px-3 py-2 text-sm outline-none focus:border-accent" />
             </div>
             <input name="opzioni" placeholder="Opzioni per scelta multipla, separate da virgola (es. <15,15-20,>20)" className="w-full rounded border border-border bg-panel-2 px-3 py-2 text-sm outline-none focus:border-accent" />
+            <label className="flex items-center gap-2 text-sm text-text-muted">
+              <input type="checkbox" name="contaSeAnnullata" value="1" className="h-4 w-4" />
+              Conta anche se la partita viene annullata a tavolino (es. &quot;Partita annullata o a tavolino?&quot; — la risposta corretta diventa automaticamente &quot;Sì&quot; quando annulli la partita)
+            </label>
             <button className="w-full rounded bg-accent py-2 text-sm font-semibold text-white hover:bg-accent-2">
               Aggiungi domanda
             </button>
@@ -106,8 +134,8 @@ export default async function AdminPartitaPage({
                 {q.tipo === "SQUADRA" && (
                   <select name={`risultato_${q.id}`} defaultValue={risultatiMap.get(q.id) ?? ""} required className="w-full rounded border border-border bg-panel-2 px-3 py-2 text-sm outline-none focus:border-accent">
                     <option value="" disabled>Seleziona</option>
-                    <option value={match.teamA.id}>{match.teamA.nome}</option>
-                    <option value={match.teamB.id}>{match.teamB.nome}</option>
+                    <option value={teamA.id}>{teamA.nome}</option>
+                    <option value={teamB.id}>{teamB.nome}</option>
                   </select>
                 )}
 
