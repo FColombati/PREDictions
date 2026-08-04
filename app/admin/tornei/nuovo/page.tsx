@@ -2,7 +2,7 @@ import { creaTorneo } from "@/lib/actions/admin";
 
 export default function NuovoTorneoPage() {
   return (
-    <div className="mx-auto max-w-xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <h1 className="mb-8 font-display text-3xl font-bold">Nuovo torneo</h1>
 
       <form action={creaTorneo} className="panel-cut space-y-4 p-6">

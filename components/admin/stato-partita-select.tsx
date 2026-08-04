@@ -10,6 +10,7 @@ const opzioni = [
   "IN_CORSO",
   "TERMINATA",
   "CALCOLATA",
+  "ANNULLATA",
 ];
 
 export function StatoPartitaSelect({
@@ -27,6 +28,15 @@ export function StatoPartitaSelect({
       disabled={isPending}
       onChange={(e) => {
         const nuovoStato = e.target.value;
+        if (
+          nuovoStato === "ANNULLATA" &&
+          !confirm(
+            "Annullare questa partita? Tutte le schedine già inviate dagli utenti verranno azzerate a 0 punti e segnate come annullate."
+          )
+        ) {
+          e.target.value = statoAttuale;
+          return;
+        }
         startTransition(() => {
           aggiornaStatoPartita(matchId, nuovoStato);
         });

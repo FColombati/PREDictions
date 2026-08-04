@@ -2,11 +2,13 @@
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { valutaTrigger, type UnlockedAchievement } from "@/lib/achievements";
 import { revalidatePath } from "next/cache";
 
 export type SchedinaState = {
   error?: string;
   success?: boolean;
+  sbloccati?: UnlockedAchievement[];
 };
 
 export async function inviaSchedina(
@@ -25,9 +27,17 @@ export async function inviaSchedina(
   });
   if (!match) return { error: "Partita non trovata" };
 
+  if (match.stato === "ANNULLATA") {
+    return { error: "Questa partita è stata annullata, non è più possibile inviare pronostici." };
+  }
+
   if (new Date() >= new Date(match.predictionLock)) {
     return { error: "Pronostici chiusi." };
   }
+
+  const primoInvio = !(await prisma.userPrediction.findUnique({
+    where: { userId_matchId: { userId: session.user.id, matchId } },
+  }));
 
   const risposte: { questionId: string; risposta: string }[] = [];
   for (const q of match.questions) {
@@ -58,9 +68,19 @@ export async function inviaSchedina(
     });
   });
 
+  let sbloccati: UnlockedAchievement[] = [];
+  if (primoInvio) {
+    const [a, b] = await Promise.all([
+      valutaTrigger(session.user.id, "PREDICTION_SUBMITTED", { tournamentId: match.tournamentId }),
+      valutaTrigger(session.user.id, "TOURNAMENT_JOINED"),
+    ]);
+    sbloccati = [...a, ...b];
+  }
+
   revalidatePath(`/partite/${matchId}`);
   revalidatePath("/storico");
-  return { success: true };
+  revalidatePath("/profilo");
+  return { success: true, sbloccati };
 }
 
 export async function inviaSchedinaTorneo(
@@ -86,6 +106,10 @@ export async function inviaSchedinaTorneo(
   if (torneo.predictionLock && new Date() >= new Date(torneo.predictionLock)) {
     return { error: "Pronostici chiusi." };
   }
+
+  const primoInvio = !(await prisma.tournamentPrediction.findUnique({
+    where: { userId_tournamentId: { userId: session.user.id, tournamentId } },
+  }));
 
   const risposte: { questionId: string; risposta: string }[] = [];
   for (const q of torneo.tournamentQuestions) {
@@ -116,7 +140,17 @@ export async function inviaSchedinaTorneo(
     });
   });
 
+  let sbloccati: UnlockedAchievement[] = [];
+  if (primoInvio) {
+    const [a, b] = await Promise.all([
+      valutaTrigger(session.user.id, "PREDICTION_SUBMITTED", { tournamentId }),
+      valutaTrigger(session.user.id, "TOURNAMENT_JOINED"),
+    ]);
+    sbloccati = [...a, ...b];
+  }
+
   revalidatePath(`/tornei/${tournamentId}/schedina`);
   revalidatePath("/storico");
-  return { success: true };
+  revalidatePath("/profilo");
+  return { success: true, sbloccati };
 }

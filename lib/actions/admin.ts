@@ -2,7 +2,12 @@
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { calcolaPunteggiPartita, calcolaPunteggiTorneo } from "@/lib/scoring";
+import type { Prisma } from "@prisma/client";
+import { calcolaPunteggiPartita, calcolaPunteggiTorneo, calcolaPunteggiPartitaAnnullata } from "@/lib/scoring";
+import { valutaTrigger } from "@/lib/achievements";
+import { costruisciRosaSnapshot, squadraA, squadraB } from "@/lib/match-snapshot";
+import { parseDatetimeLocalRoma } from "@/lib/datetime";
+import { creaNotifica } from "@/lib/actions/notifications";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -39,6 +44,20 @@ export async function aggiornaStatoTorneo(tournamentId: string, stato: string) {
     where: { id: tournamentId },
     data: { stato: stato as "IN_PREPARAZIONE" | "IN_CORSO" | "TERMINATO" },
   });
+
+  if (stato === "TERMINATO") {
+    const [scoresPartita, scoresTorneo] = await Promise.all([
+      prisma.userScore.findMany({ where: { match: { tournamentId } }, select: { userId: true } }),
+      prisma.tournamentScore.findMany({ where: { tournamentId }, select: { userId: true } }),
+    ]);
+    const partecipanti = new Set([...scoresPartita.map((s) => s.userId), ...scoresTorneo.map((s) => s.userId)]);
+
+    for (const userId of partecipanti) {
+      await valutaTrigger(userId, "TOURNAMENT_WON", { tournamentId });
+      await valutaTrigger(userId, "TOURNAMENT_FINISHED", { tournamentId });
+    }
+  }
+
   revalidatePath(`/admin/tornei/${tournamentId}`);
 }
 
@@ -99,8 +118,13 @@ export async function creaPartita(tournamentId: string, formData: FormData) {
   await requireAdmin();
   const teamAId = formData.get("teamAId") as string;
   const teamBId = formData.get("teamBId") as string;
-  const data = new Date(formData.get("data") as string);
-  const predictionLock = new Date(formData.get("predictionLock") as string);
+  const data = parseDatetimeLocalRoma(formData.get("data") as string);
+  const predictionLock = parseDatetimeLocalRoma(formData.get("predictionLock") as string);
+
+  const [teamA, teamB] = await Promise.all([
+    prisma.team.findUniqueOrThrow({ where: { id: teamAId }, include: { players: true } }),
+    prisma.team.findUniqueOrThrow({ where: { id: teamBId }, include: { players: true } }),
+  ]);
 
   const match = await prisma.match.create({
     data: {
@@ -110,19 +134,141 @@ export async function creaPartita(tournamentId: string, formData: FormData) {
       data,
       predictionLock,
       stato: "PREDICTION_APERTA",
+      rosaSnapshot: costruisciRosaSnapshot(teamA, teamB) as unknown as Prisma.InputJsonValue,
     },
   });
 
+  // Riusa la schedina dell'ultima partita del torneo che ne ha già una,
+  // così l'admin non deve ricrearla da zero ad ogni partita: la trova già
+  // pronta e al massimo la modifica (aggiunge/toglie/cambia una domanda).
+  const partitaModello = await prisma.match.findFirst({
+    where: {
+      tournamentId,
+      id: { not: match.id },
+      questions: { some: {} },
+    },
+    orderBy: { data: "desc" },
+    include: {
+      questions: { orderBy: { ordine: "asc" }, include: { options: true } },
+    },
+  });
+
+  if (partitaModello) {
+    for (const q of partitaModello.questions) {
+      const nuovaDomanda = await prisma.predictionQuestion.create({
+        data: {
+          matchId: match.id,
+          domanda: q.domanda,
+          tipo: q.tipo,
+          punti: q.punti,
+          ordine: q.ordine,
+        },
+      });
+
+      if (q.options.length > 0) {
+        await prisma.predictionOption.createMany({
+          data: q.options.map((o) => ({ questionId: nuovaDomanda.id, valore: o.valore })),
+        });
+      }
+    }
+  }
+
   revalidatePath(`/admin/tornei/${tournamentId}`);
   redirect(`/admin/partite/${match.id}`);
+}
+
+/**
+ * Elimina definitivamente una partita ANNULLATA (e, a cascata, tutte le
+ * domande/schedine/risposte/risultati/punteggi collegati — già previsto
+ * dallo schema, nessuna pulizia manuale necessaria). Consentito solo per
+ * partite annullate, per evitare di cancellare per errore storico valido.
+ */
+export async function eliminaPartita(matchId: string) {
+  await requireAdmin();
+
+  const match = await prisma.match.findUnique({ where: { id: matchId } });
+  if (!match) return;
+  if (match.stato !== "ANNULLATA") {
+    throw new Error("Solo le partite annullate possono essere eliminate definitivamente.");
+  }
+
+  await prisma.match.delete({ where: { id: matchId } });
+
+  revalidatePath(`/admin/tornei/${match.tournamentId}`);
+  revalidatePath(`/tornei/${match.tournamentId}`);
+  revalidatePath("/storico");
+  revalidatePath("/profilo");
+  revalidatePath("/admin/schedine");
+  redirect(`/admin/tornei/${match.tournamentId}`);
+}
+
+/**
+ * Permette all'admin di correggere a mano le risposte di una schedina di
+ * partita già inviata da un utente (es. errore di battitura, richiesta
+ * dell'utente, ecc). Se la partita è già stata calcolata, ricalcola subito
+ * i punteggi in modo che la correzione si rifletta immediatamente.
+ */
+export async function modificaRisposteSchedina(predictionId: string, formData: FormData) {
+  await requireAdmin();
+
+  const prediction = await prisma.userPrediction.findUnique({
+    where: { id: predictionId },
+    include: { match: { include: { questions: true } } },
+  });
+  if (!prediction) throw new Error("Schedina non trovata");
+
+  for (const q of prediction.match.questions) {
+    const valore = formData.get(`risposta_${q.id}`);
+    if (!valore || typeof valore !== "string") continue;
+    await prisma.userPredictionAnswer.upsert({
+      where: { predictionId_questionId: { predictionId, questionId: q.id } },
+      update: { risposta: valore },
+      create: { predictionId, questionId: q.id, risposta: valore },
+    });
+  }
+
+  if (prediction.match.stato === "CALCOLATA") {
+    await calcolaPunteggi(prediction.matchId);
+  } else if (prediction.match.stato === "ANNULLATA") {
+    await calcolaPunteggiPartitaAnnullata(prediction.matchId);
+  }
+
+  revalidatePath(`/admin/schedine/${prediction.match.tournamentId}/${prediction.matchId}/${predictionId}`);
+  revalidatePath(`/partite/${prediction.matchId}`);
+  revalidatePath("/storico");
+  revalidatePath("/profilo");
 }
 
 export async function aggiornaStatoPartita(matchId: string, stato: string) {
   await requireAdmin();
   const match = await prisma.match.update({
     where: { id: matchId },
-    data: { stato: stato as "DA_GIOCARE" | "PREDICTION_APERTA" | "PREDICTION_CHIUSA" | "IN_CORSO" | "TERMINATA" | "CALCOLATA" },
+    data: { stato: stato as "DA_GIOCARE" | "PREDICTION_APERTA" | "PREDICTION_CHIUSA" | "IN_CORSO" | "TERMINATA" | "CALCOLATA" | "ANNULLATA" },
   });
+
+  if (stato === "ANNULLATA") {
+    await calcolaPunteggiPartitaAnnullata(matchId);
+
+    const scoresAnnullata = await prisma.userScore.findMany({
+      where: { matchId },
+      select: { userId: true },
+    });
+    for (const s of scoresAnnullata) {
+      await valutaTrigger(s.userId, "PREDICTION_WON", { tournamentId: match.tournamentId });
+      await valutaTrigger(s.userId, "PREDICTION_LOST", { tournamentId: match.tournamentId });
+      await valutaTrigger(s.userId, "ACCURACY_UPDATED", { tournamentId: match.tournamentId });
+      await valutaTrigger(s.userId, "STREAK_UPDATED", { tournamentId: match.tournamentId });
+      await valutaTrigger(s.userId, "LOSE_STREAK_UPDATED", { tournamentId: match.tournamentId });
+      await valutaTrigger(s.userId, "PUNTEGGIO_SCHEDINA_ALTO", { tournamentId: match.tournamentId });
+      await valutaTrigger(s.userId, "SCHEDINA_FALLITA_TOTALE", { tournamentId: match.tournamentId });
+      await valutaTrigger(s.userId, "PUNTI_TOTALI_CARRIERA", { tournamentId: match.tournamentId });
+    }
+
+    revalidatePath("/storico");
+    revalidatePath("/profilo");
+    revalidatePath(`/tornei/${match.tournamentId}/classifica`);
+  }
+
   revalidatePath(`/admin/partite/${matchId}`);
   revalidatePath(`/admin/tornei/${match.tournamentId}`);
 }
@@ -140,22 +286,52 @@ export async function bloccaSubitoPartita(matchId: string) {
   revalidatePath(`/admin/tornei/${match.tournamentId}`);
 }
 
+/** Modifica solo l'orario della partita (quando si gioca), indipendente dal prediction lock. */
+export async function aggiornaDataPartita(matchId: string, formData: FormData) {
+  await requireAdmin();
+  const nuovaData = parseDatetimeLocalRoma(formData.get("data") as string);
+
+  const match = await prisma.match.update({
+    where: { id: matchId },
+    data: { data: nuovaData },
+  });
+
+  revalidatePath(`/admin/partite/${matchId}`);
+  revalidatePath(`/partite/${matchId}`);
+  revalidatePath(`/admin/tornei/${match.tournamentId}`);
+  revalidatePath(`/tornei/${match.tournamentId}`);
+}
+
 export async function aggiornaPredictionLock(matchId: string, formData: FormData) {
   await requireAdmin();
-  const nuovaData = new Date(formData.get("predictionLock") as string);
+  const nuovaData = parseDatetimeLocalRoma(formData.get("predictionLock") as string);
+
+  const matchAttuale = await prisma.match.findUnique({
+    where: { id: matchId },
+    select: { stato: true, tournamentId: true },
+  });
+  if (!matchAttuale) throw new Error("Partita non trovata");
+
+  // L'auto-transizione APERTA<->CHIUSA si applica solo mentre la partita è
+  // ancora nella fase di "solo timing pronostici": non tocchiamo lo stato
+  // se è già in corso, terminata, calcolata o annullata.
+  const soloTimingPronostici = matchAttuale.stato === "PREDICTION_APERTA" || matchAttuale.stato === "PREDICTION_CHIUSA";
+  const nuovoStato = soloTimingPronostici
+    ? (nuovaData > new Date() ? ("PREDICTION_APERTA" as const) : ("PREDICTION_CHIUSA" as const))
+    : undefined;
 
   const match = await prisma.match.update({
     where: { id: matchId },
     data: {
       predictionLock: nuovaData,
-      // se la nuova data è nel futuro e la partita era chiusa, la riapriamo
-      ...(nuovaData > new Date() ? { stato: "PREDICTION_APERTA" as const } : {}),
+      ...(nuovoStato ? { stato: nuovoStato } : {}),
     },
   });
 
   revalidatePath(`/admin/partite/${matchId}`);
   revalidatePath(`/partite/${matchId}`);
   revalidatePath(`/admin/tornei/${match.tournamentId}`);
+  revalidatePath(`/tornei/${match.tournamentId}`);
 }
 
 // ---------- DOMANDE SCHEDINA ----------
@@ -166,6 +342,7 @@ export async function creaDomanda(matchId: string, formData: FormData) {
   const tipo = formData.get("tipo") as string;
   const punti = parseInt(formData.get("punti") as string, 10) || 1;
   const opzioniRaw = (formData.get("opzioni") as string) || "";
+  const contaSeAnnullata = formData.get("contaSeAnnullata") === "1";
 
   const question = await prisma.predictionQuestion.create({
     data: {
@@ -173,6 +350,7 @@ export async function creaDomanda(matchId: string, formData: FormData) {
       domanda,
       tipo: tipo as "SQUADRA" | "GIOCATORE" | "MULTIPLA" | "BOOLEAN" | "NUMERICA",
       punti,
+      contaSeAnnullata,
     },
   });
 
@@ -198,7 +376,85 @@ export async function creaDomanda(matchId: string, formData: FormData) {
   revalidatePath(`/admin/partite/${matchId}`);
 }
 
-export async function eliminaDomanda(questionId: string, matchId: string) {
+/**
+ * Modifica una domanda esistente SENZA cancellarla e ricrearla: mantiene
+ * lo stesso id, quindi le risposte già date dagli utenti restano
+ * collegate. Se qualcuno aveva già risposto, lo avvisa con una notifica
+ * di ricontrollare la schedina.
+ */
+export async function modificaDomanda(matchId: string, questionId: string, formData: FormData) {
+  await requireAdmin();
+  const domanda = formData.get("domanda") as string;
+  const tipo = formData.get("tipo") as string;
+  const punti = parseInt(formData.get("punti") as string, 10) || 1;
+  const opzioniRaw = (formData.get("opzioni") as string) || "";
+  const contaSeAnnullata = formData.get("contaSeAnnullata") === "1";
+
+  await prisma.predictionQuestion.update({
+    where: { id: questionId },
+    data: {
+      domanda,
+      tipo: tipo as "SQUADRA" | "GIOCATORE" | "MULTIPLA" | "BOOLEAN" | "NUMERICA",
+      punti,
+      contaSeAnnullata,
+    },
+  });
+
+  await prisma.predictionOption.deleteMany({ where: { questionId } });
+  if (tipo === "MULTIPLA" && opzioniRaw.trim()) {
+    const opzioni = opzioniRaw.split(",").map((o) => o.trim()).filter(Boolean);
+    await prisma.predictionOption.createMany({
+      data: opzioni.map((valore) => ({ questionId, valore })),
+    });
+  }
+  if (tipo === "BOOLEAN") {
+    await prisma.predictionOption.createMany({
+      data: [
+        { questionId, valore: "Sì" },
+        { questionId, valore: "No" },
+      ],
+    });
+  }
+
+  const rispondenti = await prisma.userPredictionAnswer.findMany({
+    where: { questionId },
+    select: { prediction: { select: { userId: true } } },
+  });
+
+  if (rispondenti.length > 0) {
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: { teamA: true, teamB: true },
+    });
+    if (match) {
+      const teamA = squadraA(match);
+      const teamB = squadraB(match);
+      const utentiUnici = [...new Set(rispondenti.map((r) => r.prediction.userId))];
+      for (const userId of utentiUnici) {
+        await creaNotifica(
+          userId,
+          "SCHEDINA_MODIFICATA",
+          `L'admin ha modificato una domanda della schedina "${teamA.nome} vs ${teamB.nome}". Ricontrollala e rigiocala se serve.`,
+          { icona: "✏️", link: `/partite/${matchId}` }
+        );
+      }
+    }
+  }
+
+  revalidatePath(`/admin/partite/${matchId}`);
+  revalidatePath(`/partite/${matchId}`);
+}
+
+/** Aggiorna l'ordine di visualizzazione delle domande di una partita (drag & drop). */
+export async function riordinaDomande(matchId: string, idsInOrdine: string[]) {
+  await requireAdmin();
+  await Promise.all(
+    idsInOrdine.map((id, ordine) => prisma.predictionQuestion.update({ where: { id }, data: { ordine } }))
+  );
+  revalidatePath(`/admin/partite/${matchId}`);
+}
+
+export async function eliminaDomanda(matchId: string, questionId: string) {
   await requireAdmin();
   await prisma.predictionQuestion.delete({ where: { id: questionId } });
   revalidatePath(`/admin/partite/${matchId}`);
@@ -236,11 +492,25 @@ export async function calcolaPunteggi(matchId: string) {
   await requireAdmin();
   const result = await calcolaPunteggiPartita(matchId);
 
-  const match = await prisma.match.findUnique({ where: { id: matchId } });
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: { scores: { select: { userId: true } } },
+  });
   if (match) {
+    for (const s of match.scores) {
+      await valutaTrigger(s.userId, "PREDICTION_WON", { tournamentId: match.tournamentId });
+      await valutaTrigger(s.userId, "PREDICTION_LOST", { tournamentId: match.tournamentId });
+      await valutaTrigger(s.userId, "ACCURACY_UPDATED", { tournamentId: match.tournamentId });
+      await valutaTrigger(s.userId, "STREAK_UPDATED", { tournamentId: match.tournamentId });
+      await valutaTrigger(s.userId, "LOSE_STREAK_UPDATED", { tournamentId: match.tournamentId });
+      await valutaTrigger(s.userId, "PUNTEGGIO_SCHEDINA_ALTO", { tournamentId: match.tournamentId });
+      await valutaTrigger(s.userId, "SCHEDINA_FALLITA_TOTALE", { tournamentId: match.tournamentId });
+      await valutaTrigger(s.userId, "PUNTI_TOTALI_CARRIERA", { tournamentId: match.tournamentId });
+    }
     revalidatePath(`/admin/partite/${matchId}`);
     revalidatePath(`/tornei/${match.tournamentId}`);
     revalidatePath(`/tornei/${match.tournamentId}/classifica`);
+    revalidatePath("/profilo");
   }
   return result;
 }
@@ -303,9 +573,90 @@ export async function creaDomandaTorneo(tournamentId: string, formData: FormData
   revalidatePath(`/admin/tornei/${tournamentId}`);
 }
 
-export async function eliminaDomandaTorneo(questionId: string, tournamentId: string) {
+export async function eliminaDomandaTorneo(tournamentId: string, questionId: string) {
   await requireAdmin();
   await prisma.tournamentPredictionQuestion.delete({ where: { id: questionId } });
+  revalidatePath(`/admin/tornei/${tournamentId}`);
+}
+
+/**
+ * Modifica una domanda della schedina di torneo SENZA cancellarla e
+ * ricrearla, così le risposte già date restano collegate. Avvisa con una
+ * notifica chi aveva già risposto.
+ */
+export async function modificaDomandaTorneo(tournamentId: string, questionId: string, formData: FormData) {
+  await requireAdmin();
+  const domanda = formData.get("domanda") as string;
+  const tipo = formData.get("tipo") as string;
+  const punti = parseInt(formData.get("punti") as string, 10) || 1;
+  const opzioniRaw = (formData.get("opzioni") as string) || "";
+
+  await prisma.tournamentPredictionQuestion.update({
+    where: { id: questionId },
+    data: {
+      domanda,
+      tipo: tipo as "SQUADRA" | "GIOCATORE" | "MULTIPLA" | "BOOLEAN" | "NUMERICA",
+      punti,
+    },
+  });
+
+  await prisma.tournamentPredictionOption.deleteMany({ where: { questionId } });
+  if (tipo === "SQUADRA") {
+    const teams = await prisma.team.findMany({ where: { tournamentId } });
+    await prisma.tournamentPredictionOption.createMany({
+      data: teams.map((t) => ({ questionId, valore: t.id })),
+    });
+  } else if (tipo === "GIOCATORE") {
+    const giocatori = await prisma.player.findMany({ where: { team: { tournamentId } } });
+    await prisma.tournamentPredictionOption.createMany({
+      data: giocatori.map((p) => ({ questionId, valore: p.id })),
+    });
+  } else if (tipo === "MULTIPLA" && opzioniRaw.trim()) {
+    const opzioni = opzioniRaw.split(",").map((o) => o.trim()).filter(Boolean);
+    await prisma.tournamentPredictionOption.createMany({
+      data: opzioni.map((valore) => ({ questionId, valore })),
+    });
+  } else if (tipo === "BOOLEAN") {
+    await prisma.tournamentPredictionOption.createMany({
+      data: [
+        { questionId, valore: "Sì" },
+        { questionId, valore: "No" },
+      ],
+    });
+  }
+
+  const rispondenti = await prisma.tournamentPredictionAnswer.findMany({
+    where: { questionId },
+    select: { prediction: { select: { userId: true } } },
+  });
+
+  if (rispondenti.length > 0) {
+    const torneo = await prisma.tournament.findUnique({ where: { id: tournamentId } });
+    if (torneo) {
+      const utentiUnici = [...new Set(rispondenti.map((r) => r.prediction.userId))];
+      for (const userId of utentiUnici) {
+        await creaNotifica(
+          userId,
+          "SCHEDINA_MODIFICATA",
+          `L'admin ha modificato una domanda della schedina di torneo "${torneo.nome}". Ricontrollala e rigiocala se serve.`,
+          { icona: "✏️", link: `/tornei/${tournamentId}/schedina` }
+        );
+      }
+    }
+  }
+
+  revalidatePath(`/admin/tornei/${tournamentId}`);
+  revalidatePath(`/tornei/${tournamentId}/schedina`);
+}
+
+/** Aggiorna l'ordine di visualizzazione delle domande della schedina di torneo (drag & drop). */
+export async function riordinaDomandeTorneo(tournamentId: string, idsInOrdine: string[]) {
+  await requireAdmin();
+  await Promise.all(
+    idsInOrdine.map((id, ordine) =>
+      prisma.tournamentPredictionQuestion.update({ where: { id }, data: { ordine } })
+    )
+  );
   revalidatePath(`/admin/tornei/${tournamentId}`);
 }
 
@@ -322,7 +673,7 @@ export async function bloccaSubitoTorneo(tournamentId: string) {
 
 export async function aggiornaPredictionLockTorneo(tournamentId: string, formData: FormData) {
   await requireAdmin();
-  const nuovaData = new Date(formData.get("predictionLock") as string);
+  const nuovaData = parseDatetimeLocalRoma(formData.get("predictionLock") as string);
 
   await prisma.tournament.update({
     where: { id: tournamentId },
@@ -355,13 +706,61 @@ export async function inserisciRisultatiTorneo(tournamentId: string, formData: F
   revalidatePath(`/admin/tornei/${tournamentId}`);
 }
 
+/**
+ * Come modificaRisposteSchedina, ma per la schedina "di torneo".
+ */
+export async function modificaRisposteSchedinaTorneo(predictionId: string, formData: FormData) {
+  await requireAdmin();
+
+  const prediction = await prisma.tournamentPrediction.findUnique({
+    where: { id: predictionId },
+    include: { tournament: { include: { tournamentQuestions: true, tournamentScores: true } } },
+  });
+  if (!prediction) throw new Error("Schedina non trovata");
+
+  for (const q of prediction.tournament.tournamentQuestions) {
+    const valore = formData.get(`risposta_${q.id}`);
+    if (!valore || typeof valore !== "string") continue;
+    await prisma.tournamentPredictionAnswer.upsert({
+      where: { predictionId_questionId: { predictionId, questionId: q.id } },
+      update: { risposta: valore },
+      create: { predictionId, questionId: q.id, risposta: valore },
+    });
+  }
+
+  if (prediction.tournament.tournamentScores.length > 0) {
+    await calcolaPunteggiTorneoAction(prediction.tournamentId);
+  }
+
+  revalidatePath(`/admin/schedine/${prediction.tournamentId}/torneo/${predictionId}`);
+  revalidatePath(`/tornei/${prediction.tournamentId}/schedina`);
+  revalidatePath("/storico");
+  revalidatePath("/profilo");
+}
+
 export async function calcolaPunteggiTorneoAction(tournamentId: string) {
   await requireAdmin();
   const result = await calcolaPunteggiTorneo(tournamentId);
+
+  const scores = await prisma.tournamentScore.findMany({
+    where: { tournamentId },
+    select: { userId: true },
+  });
+  for (const s of scores) {
+    await valutaTrigger(s.userId, "PREDICTION_WON", { tournamentId });
+    await valutaTrigger(s.userId, "PREDICTION_LOST", { tournamentId });
+    await valutaTrigger(s.userId, "ACCURACY_UPDATED", { tournamentId });
+    await valutaTrigger(s.userId, "PUNTEGGIO_SCHEDINA_ALTO", { tournamentId });
+    await valutaTrigger(s.userId, "SCHEDINA_FALLITA_TOTALE", { tournamentId });
+    await valutaTrigger(s.userId, "PUNTI_TOTALI_CARRIERA", { tournamentId });
+    await valutaTrigger(s.userId, "TOURNAMENT_WON", { tournamentId });
+    await valutaTrigger(s.userId, "TOURNAMENT_FINISHED", { tournamentId });
+  }
 
   revalidatePath(`/admin/tornei/${tournamentId}`);
   revalidatePath(`/tornei/${tournamentId}`);
   revalidatePath(`/tornei/${tournamentId}/classifica`);
   revalidatePath(`/tornei/${tournamentId}/schedina`);
+  revalidatePath("/profilo");
   return result;
 }

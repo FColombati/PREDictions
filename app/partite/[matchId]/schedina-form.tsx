@@ -37,6 +37,21 @@ export function SchedinaForm({
   const inviaSchedinaConMatch = inviaSchedina.bind(null, matchId);
   const [state, formAction, isPending] = useActionState(inviaSchedinaConMatch, initialState);
 
+  // La risposta corretta salvata per domande Squadra/Giocatore è l'ID, non
+  // il nome — va tradotta per la visualizzazione, esattamente come già
+  // succede per la selezione delle risposte più sopra nel form.
+  function etichettaRispostaCorretta(tipo: string, valore: string): string {
+    if (tipo === "SQUADRA") {
+      if (valore === teamA.id) return teamA.nome;
+      if (valore === teamB.id) return teamB.nome;
+    }
+    if (tipo === "GIOCATORE") {
+      const g = giocatori.find((p) => p.id === valore);
+      if (g) return g.nome;
+    }
+    return valore;
+  }
+
   // Stato locale delle risposte selezionate: usato per evidenziare subito
   // l'opzione cliccata, senza aspettare un reload o l'invio del form.
   const [risposte, setRisposte] = useState<Record<string, string>>(risposteEsistenti);
@@ -182,7 +197,9 @@ export function SchedinaForm({
             )}
 
             {calcolata && rispostaCorretta !== undefined && (
-              <p className="mt-2 text-xs text-text-muted">Risposta corretta: {rispostaCorretta}</p>
+              <p className="mt-2 text-xs text-text-muted">
+                Risposta corretta: {etichettaRispostaCorretta(d.tipo, rispostaCorretta)}
+              </p>
             )}
           </div>
         );
