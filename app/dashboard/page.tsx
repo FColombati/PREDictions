@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { CountdownLock } from "@/components/countdown-lock";
+import { squadraA, squadraB } from "@/lib/match-snapshot";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -75,7 +76,7 @@ export default async function DashboardPage() {
   const tornei = Array.from(perTorneo.entries()).sort((a, b) => b[1].puntiTotali - a[1].puntiTotali);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[96rem] px-4 py-10 sm:px-6">
       <h1 className="mb-8 font-display text-3xl font-bold">
         Bentornato, <span className="text-gradient">{session!.user.name}</span>
       </h1>
@@ -131,7 +132,7 @@ export default async function DashboardPage() {
               <div>
                 <p className="text-xs text-text-muted">{m.tournament.nome}</p>
                 <p className="font-display font-semibold">
-                  {m.teamA.nome} <span className="text-text-muted">vs</span> {m.teamB.nome}
+                  {squadraA(m).nome} <span className="text-text-muted">vs</span> {squadraB(m).nome}
                 </p>
               </div>
               <div className="flex items-center gap-3">

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { formatSoloDataRoma } from "@/lib/datetime";
 
 export default async function AdminUtentiPage() {
   const utenti = await prisma.user.findMany({
@@ -7,7 +8,7 @@ export default async function AdminUtentiPage() {
   });
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <h1 className="mb-8 font-display text-3xl font-bold">Utenti registrati</h1>
 
       <div className="panel-cut overflow-x-auto">
@@ -33,7 +34,7 @@ export default async function AdminUtentiPage() {
                 </td>
                 <td className="px-4 py-3 text-right">{u._count.predictions}</td>
                 <td className="px-4 py-3 text-text-muted">
-                  {new Date(u.dataRegistrazione).toLocaleDateString("it-IT", { dateStyle: "medium" })}
+                  {formatSoloDataRoma(u.dataRegistrazione)}
                 </td>
               </tr>
             ))}

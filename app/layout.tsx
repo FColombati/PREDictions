@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Chakra_Petch, Inter } from "next/font/google";
 import { Navbar } from "@/components/navbar";
+import { PageTransition } from "@/components/page-transition";
 import "./globals.css";
 
 const chakra = Chakra_Petch({
@@ -28,7 +29,9 @@ export default function RootLayout({
     <html lang="it" className={`${chakra.variable} ${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-void text-text">
         <Navbar />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1">
+          <PageTransition>{children}</PageTransition>
+        </main>
         <footer className="border-t border-border py-6 text-center text-xs text-text-muted">
           PredIction · Made with ❤️ by Colo · non affiliato a Omeda Studios (non ancora bitches!)
         </footer>

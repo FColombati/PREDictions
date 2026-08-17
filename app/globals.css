@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+html {
+  scroll-behavior: smooth;
+}
+
 :root {
   --color-void: #0a0c13;
   --color-panel: #12151f;
@@ -104,4 +108,16 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 .logo-scaled{
 transform: scale(2);
+}
+@keyframes slideIn {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes page-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-page-fade-in {
+  animation: page-fade-in 150ms ease;
 }
