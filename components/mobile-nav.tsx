@@ -3,9 +3,17 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 
 const DRAWER_WIDTH = 272;
+
+const ADMIN_LINKS = [
+  { href: "/admin", label: "Panoramica" },
+  { href: "/admin/schedine", label: "Schedine" },
+  { href: "/admin/achievements", label: "Achievement" },
+  { href: "/admin/rewards", label: "Rewards" },
+];
 
 export function MobileNav({
   loggedIn,
@@ -15,10 +23,17 @@ export function MobileNav({
   isAdmin: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const adminAttivo = ADMIN_LINKS.some((l) => pathname === l.href || pathname.startsWith(`${l.href}/`));
+  const [adminAperto, setAdminAperto] = useState(adminAttivo);
 
   const links = [
     { href: "/tornei", label: "Tornei" },
     { href: "/classifica", label: "Classifica" },
+    { href: "/classifica-achievement", label: "Classifica achievement" },
+    { href: "/achievements/lista", label: "Lista achievement" },
+    { href: "/achievements", label: "Feed achievement" },
+    { href: "/cerca", label: "Cerca" },
     ...(loggedIn
       ? [
           { href: "/dashboard", label: "Dashboard" },
@@ -26,12 +41,7 @@ export function MobileNav({
           { href: "/profilo", label: "Profilo" },
         ]
       : []),
-    ...(isAdmin
-      ? [
-          { href: "/admin", label: "Admin" },
-          { href: "/admin/schedine", label: "Schedine" },
-        ]
-      : []),
+    { href: "/regole", label: "Regole" },
   ];
 
   return (
@@ -101,25 +111,70 @@ export function MobileNav({
           width: DRAWER_WIDTH,
           transform: open ? "translateX(0)" : "translateX(-100%)",
         }}
-        className="fixed inset-y-0 left-0 z-40 border-r border-border bg-panel transition-transform duration-300 lg:hidden backgrounded"
+        className="fixed inset-y-0 left-0 z-40 overflow-y-auto border-r border-border bg-panel transition-transform duration-300 lg:hidden backgrounded"
       >
-        <nav className="flex flex-col gap-1 p-4 pt-20 text-sm mobile-nav-background backgrounded">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              onClick={() => setOpen(false)}
-              className={`rounded px-3 py-2.5 transition-colors hover:bg-panel-2 ${
-                l.label === "Admin" || l.label === "Schedine"
-                  ? "text-signal"
-                  : "text-text-muted hover:text-text"
-              }`}
-            >
-              {l.label}
-            </Link>
-          ))}
+        <nav className="flex flex-col gap-1 p-4 pb-8 pt-20 text-sm mobile-nav-background backgrounded">
+          {links.map((l) => {
+            const attivo = pathname === l.href || pathname.startsWith(`${l.href}/`);
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                onClick={() => setOpen(false)}
+                className={`relative rounded px-3 py-2.5 text-text-muted transition-colors hover:bg-panel-2 hover:text-text ${attivo ? "bg-panel-2 text-text" : ""}`}
+              >
+                {attivo && (
+                  <span className="absolute bottom-1.5 left-0 top-1.5 w-[3px] rounded-full bg-gradient-to-b from-accent-2 to-signal" />
+                )}
+                {l.label}
+              </Link>
+            );
+          })}
 
-          <div className="my-3 h-px bg-border" />
+          {isAdmin && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setAdminAperto((v) => !v)}
+                className={`relative flex w-full items-center justify-between rounded px-3 py-2.5 text-left text-signal transition-colors hover:bg-panel-2 ${adminAttivo ? "bg-panel-2" : ""}`}
+              >
+                <span>Admin</span>
+                {adminAttivo && (
+                  <span className="absolute bottom-1.5 left-0 top-1.5 w-[3px] rounded-full bg-gradient-to-b from-accent-2 to-signal" />
+                )}
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 10 10"
+                  className={`shrink-0 transition-transform ${adminAperto ? "rotate-180" : ""}`}
+                >
+                  <path d="M1 3 L5 7 L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+
+              {adminAperto && (
+                <div className="ml-3 mt-1 flex flex-col gap-1 border-l border-border pl-3">
+                  {ADMIN_LINKS.map((l) => {
+                    const attivo = pathname === l.href || pathname.startsWith(`${l.href}/`);
+                    return (
+                      <Link
+                        key={l.href}
+                        href={l.href}
+                        onClick={() => setOpen(false)}
+                        className={`rounded px-3 py-2 text-sm transition-colors hover:bg-panel-2 ${
+                          attivo ? "bg-panel-2 text-signal" : "text-signal/80 hover:text-signal"
+                        }`}
+                      >
+                        {l.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="my-3 h-px shrink-0 bg-border" />
 
           {loggedIn ? (
             <button
@@ -133,22 +188,13 @@ export function MobileNav({
               Esci
             </button>
           ) : (
-            <>
-              <Link
-                href="/login"
-                onClick={() => setOpen(false)}
-                className="rounded px-3 py-2.5 font-semibold text-accent-2 transition-colors hover:bg-panel-2"
-              >
-                Accedi
-              </Link>
-              {/* <Link
-                href="/registrati"
-                onClick={() => setOpen(false)}
-                className="rounded px-3 py-2.5 font-semibold text-accent-2 transition-colors hover:bg-panel-2"
-              >
-                Registrati
-              </Link> */}
-            </>
+            <Link
+              href="/login"
+              onClick={() => setOpen(false)}
+              className="rounded px-3 py-2.5 font-semibold text-accent-2 transition-colors hover:bg-panel-2"
+            >
+              Accedi
+            </Link>
           )}
         </nav>
       </div>

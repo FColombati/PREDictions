@@ -2,11 +2,7 @@
 
 import { useTransition } from "react";
 import { aggiornaPredictionLock, bloccaSubitoPartita } from "@/lib/actions/admin";
-
-function toLocalInputValue(date: Date) {
-  const tzOffset = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
-}
+import { formatDatetimeLocalRoma, formatDataOraRoma } from "@/lib/datetime";
 
 export function PredictionLockControl({
   matchId,
@@ -24,7 +20,7 @@ export function PredictionLockControl({
         <div>
           <p className="text-sm font-semibold">Prediction Lock</p>
           <p className="text-xs text-text-muted">
-            {new Date(predictionLock).toLocaleString("it-IT", { dateStyle: "medium", timeStyle: "short" })}
+            {formatDataOraRoma(predictionLock)}
             {" · "}
             <span className={locked ? "text-ember" : "text-verdant"}>
               {locked ? "chiuso" : "aperto"}
@@ -54,7 +50,7 @@ export function PredictionLockControl({
           <input
             type="datetime-local"
             name="predictionLock"
-            defaultValue={toLocalInputValue(new Date(predictionLock))}
+            defaultValue={formatDatetimeLocalRoma(new Date(predictionLock))}
             required
             className="w-full rounded border border-border bg-panel-2 px-3 py-2 text-sm outline-none focus:border-accent"
           />

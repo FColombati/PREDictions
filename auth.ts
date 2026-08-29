@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import Discord from "next-auth/providers/discord";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { valutaTrigger } from "@/lib/achievements";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: "jwt" },
@@ -46,7 +47,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (!user.email) return false; // serve un'email per collegare l'account
 
       const esistente = await prisma.user.findUnique({ where: { email: user.email } });
-      if (esistente) return true;
+      if (esistente) {
+        // Sincronizza l'avatar con quello attuale di Discord ad ogni
+        // login: se l'utente lo cambia su Discord, si aggiorna anche qui
+        // (prima veniva salvato solo alla creazione dell'account e mai
+        // più aggiornato, quindi l'immagine vecchia smetteva di
+        // funzionare non appena cambiata su Discord).
+        if (user.image && user.image !== esistente.avatar) {
+          await prisma.user.update({ where: { id: esistente.id }, data: { avatar: user.image } });
+        }
+        return true;
+      }
 
       const baseUsername = (user.name || user.email.split("@")[0])
         .replace(/[^a-zA-Z0-9_]/g, "")
@@ -70,6 +81,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           ruolo: "USER",
         },
       });
+
+      const nuovoUtente = await prisma.user.findUnique({ where: { email: user.email } });
+      if (nuovoUtente) await valutaTrigger(nuovoUtente.id, "ACCOUNT_CREATED");
 
       return true;
     },

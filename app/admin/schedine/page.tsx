@@ -10,7 +10,7 @@ export default async function AdminSchedinePage() {
   });
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <h1 className="mb-2 font-display text-3xl font-bold">Schedine inviate</h1>
       <p className="mb-8 text-text-muted">
         Seleziona un torneo per vedere le partite e le schedine inviate dagli utenti.
