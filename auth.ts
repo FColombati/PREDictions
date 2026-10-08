@@ -37,7 +37,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         };
       },
     }),
-    Discord,
+    // Discord restituisce il parametro `iss` (RFC 9207) nella risposta di
+    // login; Auth.js lo valida e, senza un issuer configurato, rifiuta il
+    // login con "unexpected iss (issuer) response parameter value".
+    // Il valore arriva da Discord stesso: https://discord.com
+    Discord({ issuer: "https://discord.com" }),
   ],
   callbacks: {
     // Per Discord: crea (o collega) automaticamente l'utente nel nostro DB
