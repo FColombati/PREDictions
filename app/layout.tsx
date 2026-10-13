@@ -33,7 +33,7 @@ export default function RootLayout({
           <PageTransition>{children}</PageTransition>
         </main>
         <footer className="border-t border-border py-6 text-center text-xs text-text-muted">
-          PredIction · Made with ❤️ by Colo · non affiliato a Omeda Studios (non ancora bitches!)
+          Pred-Ictions · Made with ❤️ by Colo · non affiliato a Omeda Studios
         </footer>
       </body>
     </html>
